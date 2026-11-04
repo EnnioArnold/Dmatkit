@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Tests für dmatkit.aufgaben.exercises: python3 tests/tests_exercises.py
 
-Jede Aufgabe der Serien 1 bis 6, des Lerngerüsts und der Vorlesungsbeispiele muss laufen und mit dem Soll
+Jede Aufgabe der Serien 1 bis 7, des Lerngerüsts und der Vorlesungsbeispiele muss laufen und mit dem Soll
 übereinstimmen. Die Soll-Werte stammen aus den Serien, der Mitschrift, Python-Builtins oder Brute-Force,
 nie aus der Ausgabe von dmatkit selbst. Dieser Test rechnet die wichtigsten Werte noch einmal unabhängig nach.
 """
@@ -50,7 +50,7 @@ for k in ex.EXERCISES:
 # ==========================================================================
 # 2. Aufbau und Vollständigkeit
 # ==========================================================================
-wochen = {w: ex.liste(w) for w in range(1, 7)}
+wochen = {w: ex.liste(w) for w in range(1, 8)}
 ok(sum(len(v) for v in wochen.values()) == len(ex.EXERCISES))
 ok(all(len(v) > 0 for v in wochen.values()))
 ok(ex.liste() == list(ex.EXERCISES))
@@ -67,9 +67,9 @@ ex.liste(2)._repr_html_()
 ok(repr(ex.liste(art="Beispiel")).count("\n") >= 10)
 
 ids = list(ex.EXERCISES)
-ok(len(ids) == len(set(ids)) and all(re.fullmatch(r"(SW|LG)[1-6]\.[A-Za-z0-9]+", k) for k in ids))
+ok(len(ids) == len(set(ids)) and all(re.fullmatch(r"(SW|LG)[1-7]\.[A-Za-z0-9]+", k) for k in ids))
 for k, e in ex.EXERCISES.items():
-    ok(e.id == k and 1 <= e.week <= 6 and str(e.week) == k[2], k)
+    ok(e.id == k and 1 <= e.week <= 7 and str(e.week) == k[2], k)
     ok(isinstance(e.title, str) and len(e.title) > 3 and isinstance(e.task, str) and len(e.task) > 10, k)
     ok(callable(e.call) and len(e.expected) >= 1, k)
     ok(isinstance(e.hint, str) and e.hint != "", f"{k}: Hinweis fehlt")
@@ -79,7 +79,7 @@ for k, e in ex.EXERCISES.items():
     e._repr_html_()
     ok("erwartet" not in e.task.lower(), k)
 
-# Alle Aufgaben der Serien 1 bis 6 sind vorhanden (nach den Übungsblättern)
+# Alle Aufgaben der Serien 1 bis 7 sind vorhanden (nach den Übungsblättern)
 SOLL = {
     1: ["SW1.1a", "SW1.1b", "SW1.1c", "SW1.1d", "SW1.1e", "SW1.2", "SW1.3", "SW1.4", "SW1.5a32", "SW1.5b32", "SW1.5a64", "SW1.5b64", "SW1.6", "SW1.7a"],
     2: ["SW2.1a", "SW2.1b", "SW2.2", "SW2.3a", "SW2.3b", "SW2.4a", "SW2.4b", "SW2.5", "SW2.6", "SW2.7a", "SW2.7b", "SW2.7c", "SW2.7d", "SW2.7e"],
@@ -90,10 +90,13 @@ SOLL = {
         "SW5.8a", "SW5.8b", "SW5.8c", "SW5.8d", "SW5.8e"],
     6: ["SW6.1a", "SW6.1b", "SW6.2", "SW6.3", "SW6.4a", "SW6.4b", "SW6.5a", "SW6.5b", "SW6.5c", "SW6.6"]
        + [f"SW6.7{c}" for c in "abcde"] + [f"SW6.8{c}" for c in "abcde"],
+    7: [f"SW7.{i}" for i in range(1, 12)],
 }
 for w, soll in SOLL.items():
     for k in soll:
         ok(k in ex.EXERCISES, f"fehlt: {k}")
+        if w >= 6:                                       # in den Unterlagen steht keine Lösung: als eigene gekennzeichnet
+            ok("Lösung eigen" in ex.aufgabe(k).source or "Beispiel im Text" in ex.aufgabe(k).source, f"{k}: Lösung eigen fehlt")
     ok(set(soll) <= set(wochen[w]))
 for pref in ("LG1.a1", "LG1.b1", "LG1.c1", "LG1.d", "LG1.e", "LG1.f", "LG2.a", "LG2.b", "LG2.c1", "LG2.d1", "LG2.e1", "LG3.a", "LG3.b1", "LG3.c1",
              "LG4.a1", "LG4.b", "LG4.c", "LG4.d", "LG5.a", "LG5.b1"):
@@ -121,7 +124,7 @@ b = ex.pruefen("SW5.1a")
 ok(b.ok and "SW5.1a" in repr(b) and "✓" in repr(b) and "<table" in b._repr_html_())
 ok("Alles grün" in repr(g))
 ok(repr(g).startswith(f"{g.gesamt} von {g.gesamt}") and "SW5:" in repr(g) and "<pre>" in g._repr_html_())
-for w in range(1, 7):
+for w in range(1, 8):
     gw = ex.alle_pruefen(w)
     ok(gw.ok and gw.gesamt == len(wochen[w]), w)
 ok(ex.alle_pruefen("SW2", "Lerngerüst").gesamt == len(ex.liste(2, "Lerngerüst")))
@@ -265,4 +268,4 @@ ok(a1 == a2 and all(v for _, v in a1))
 ok(repr(ex.loesen("SW5.1a")) == repr(ex.loesen("SW5.1a")))
 
 print(f"tests_exercises.py: {N[0]} Prüfungen bestanden, {len(ex.EXERCISES)} Aufgaben ("
-      + ", ".join(f"SW{w}: {len(wochen[w])}" for w in range(1, 7)) + ")")
+      + ", ".join(f"SW{w}: {len(wochen[w])}" for w in range(1, 8)) + ")")
