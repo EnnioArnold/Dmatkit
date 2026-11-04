@@ -513,7 +513,7 @@ def f_nk_ohne_periode(z, n):            # Fehler: bricht nach 8 Stellen ab
 # ==========================================================================
 ok(len(u.VORLAGEN) >= 13 and set(u.namen()) == set(u.VORLAGEN))
 for nm in ("meine_dec_to_bin", "meine_binaer_zu_dezimal", "mein_forall", "mein_exists", "meine_hat_duplikate", "mein_palindrom",
-           "meine_wahrheitstabelle", "meine_folgerung", "meine_resolvente", "meine_lineare_suche", "mein_selection_sort", "mein_merge_sort", "meine_hanoi"):
+           "meine_wahrheitstabelle", "meine_folgerung", "meine_resolvente", "meine_lineare_suche", "mein_selection_sort", "mein_merge_sort", "meine_hanoi", "meine_muenzen", "meine_ueberdeckung", "mein_quick_sort"):
     ok(nm in u.VORLAGEN, nm)
     src = u.vorlage(nm)
     ok(src.startswith("def " + nm), nm)
@@ -536,6 +536,7 @@ for nm, pr in [("meine_dec_to_bin", u.pruefe_dec_to_bin), ("meine_binaer_zu_dezi
                ("meine_folgerung", u.pruefe_folgerung), ("meine_resolvente", u.pruefe_resolvente),
                ("meine_lineare_suche", u.pruefe_lineare_suche), ("mein_selection_sort", u.pruefe_selection_sort),
                ("mein_merge_sort", u.pruefe_merge_sort), ("meine_hanoi", u.pruefe_hanoi),
+               ("meine_muenzen", u.pruefe_muenzen), ("meine_ueberdeckung", u.pruefe_ueberdeckung), ("mein_quick_sort", u.pruefe_quick_sort),
                ("meine_klassifikation", u.pruefe_klassifikation), ("meine_potenzmenge", u.pruefe_potenzmenge),
                ("meine_dezimal_zu_bruch", u.pruefe_dezimal_zu_bruch), ("meine_binaer_nachkomma", u.pruefe_binaer_nachkomma)]:
     ns = {}
@@ -732,6 +733,98 @@ schlecht(u.pruefe_hanoi, lambda n, s_, z, h: [(1, s_, s_)], "von = nach")
 p = u.pruefe_hanoi(r_hn, ausgabe=False)
 ok(p.gesamt == 6 and "kürzesten" not in p.bericht())
 ok(len(r_hn(4, "x", "y", "z")) == 15)
+
+# SW7: Induktion
+def r_mz(n):
+    return (2, 0) if n == 4 else (0, 1) if n == 5 else (lambda a, b: (a + 1, b))(*r_mz(n - 2))
+
+
+def f_mz_negativ(n):                    # Fehler: eine Münze Fünffränkler zu viel, a wird negativ
+    return ((n - 5 * (n // 5 + 1)) // 2, n // 5 + 1)
+
+
+def f_mz_einfach(n):                    # Fehler: nur Zweifränkler (für ungerade n falsch)
+    return (n // 2, 0)
+
+
+def r_ueb(n, loch):
+    fl = []
+
+    def rec(z, s, g, lo):
+        if g == 1:
+            return
+        h = g // 2
+        mz, ms = z + h, s + h
+        ecken = [(mz - 1, ms - 1), (mz - 1, ms), (mz, ms - 1), (mz, ms)]
+        quad = [(z, s), (z, ms), (mz, s), (mz, ms)]
+        fliese = []
+        for (qz, qs), e in zip(quad, ecken):
+            if qz <= lo[0] < qz + h and qs <= lo[1] < qs + h:
+                rec(qz, qs, h, lo)
+            else:
+                fliese.append(e)
+                rec(qz, qs, h, e)
+        fl.append(tuple(fliese))
+    rec(0, 0, 2 ** n, tuple(loch))
+    return fl
+
+
+def f_ueb_linie(n, loch):               # Fehler: drei Felder einer Zeile, keine Winkel-Fliese
+    return [((0, 0), (0, 1), (0, 2))]
+
+
+def f_ueb_doppelt(n, loch):             # Fehler: letzte Fliese doppelt
+    r = r_ueb(n, loch)
+    return r + [r[-1]]
+
+
+def r_qs(a):
+    if len(a) <= 1:
+        return list(a)
+    L = [x for x in a[1:] if x < a[0]]
+    R = [x for x in a[1:] if not x < a[0]]
+    return r_qs(L) + [a[0]] + r_qs(R)
+
+
+def f_qs_gleiche_weg(a):                # Fehler: gleiche Werte gehen verloren (x <= Pivot nach L, x > Pivot nach R mit Strichen)
+    if len(a) <= 1:
+        return list(a)
+    return f_qs_gleiche_weg([x for x in a[1:] if x < a[0]]) + [a[0]] + f_qs_gleiche_weg([x for x in a[1:] if x > a[0]])
+
+
+def f_qs_mutiert(a):                    # Fehler: verändert die Eingabe
+    a.sort()
+    return a
+
+
+gut(u.pruefe_muenzen, r_mz, "Münzen")
+gut(u.pruefe_muenzen, lambda n: [r_mz(n)[0], r_mz(n)[1]], "Münzen mit Liste")
+schlecht(u.pruefe_muenzen, f_mz_einfach, "nur Zweifränkler")
+schlecht(u.pruefe_muenzen, f_mz_negativ, "negative Anzahl")
+schlecht(u.pruefe_muenzen, lambda n: None, "kein return")
+schlecht(u.pruefe_muenzen, lambda n: n, "kein Paar")
+schlecht(u.pruefe_muenzen, lambda n: (1.5, 1), "keine ganze Zahl")
+schlecht(u.pruefe_muenzen, lambda n: (n // 2, 1), "Summe stimmt nicht")
+ok(all(2 * r_mz(n)[0] + 5 * r_mz(n)[1] == n for n in range(4, 300)))
+gut(u.pruefe_ueberdeckung, r_ueb, "Parkettierung")
+gut(u.pruefe_ueberdeckung, lambda n, lo: [[list(c) for c in f] for f in r_ueb(n, lo)], "Parkettierung mit Listen")
+schlecht(u.pruefe_ueberdeckung, f_ueb_linie, "Linie statt Winkel")
+schlecht(u.pruefe_ueberdeckung, f_ueb_doppelt, "Fliese doppelt")
+schlecht(u.pruefe_ueberdeckung, lambda n, lo: r_ueb(n, lo)[:-1], "Felder bleiben frei")
+schlecht(u.pruefe_ueberdeckung, lambda n, lo: [], "leer")
+schlecht(u.pruefe_ueberdeckung, lambda n, lo: "Fliesen", "Text")
+schlecht(u.pruefe_ueberdeckung, lambda n, lo: [((0, 0), (0, 1))], "kein Tripel")
+schlecht(u.pruefe_ueberdeckung, lambda n, lo: [((9, 9), (9, 10), (10, 9))], "ausserhalb des Bretts")
+gut(u.pruefe_quick_sort, r_qs, "quickSort")
+gut(u.pruefe_quick_sort, lambda a: sorted(a), "quickSort mit sorted (mit Hinweis)")
+schlecht(u.pruefe_quick_sort, f_qs_gleiche_weg, "gleiche Werte gehen verloren")
+schlecht(u.pruefe_quick_sort, f_qs_mutiert, "verändert die Eingabe")
+schlecht(u.pruefe_quick_sort, lambda a: None, "kein return")
+schlecht(u.pruefe_quick_sort, lambda a: tuple(sorted(a)), "Tupel")
+schlecht(u.pruefe_quick_sort, lambda a: sorted(a, reverse=True), "absteigend")
+schlecht(u.pruefe_quick_sort, lambda a: a[:1], "Elemente gehen verloren")
+p = u.pruefe_quick_sort(r_qs, ausgabe=False)
+ok(p.gesamt == 10 and p.ok)
 
 # Extras
 gut(u.pruefe_potenzmenge, r_pot, "Potenzmenge")
