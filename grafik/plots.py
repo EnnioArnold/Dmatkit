@@ -22,6 +22,7 @@ Die Funktionen nehmen Formeln, Zahlen und Listen — keine Result-Objekte:
     plot_steps([1, 2, 4, 8], [3, 7, 15, 31], fit="4*n-1")
     plot_halving(100)
     plot_recursion_tree(recursion_tree("mergeSort", [4, 6, 5, 1]).root, values=True)
+    plot_tiling(tile_board(3, (5, 2)).grid, (5, 2))
 
 Plotly gibt es zusätzlich für die interaktive Variante (`plotly_growth`); fehlt
 es, meldet nur diese eine Funktion es klar.
@@ -1767,6 +1768,45 @@ def plot_recursion_tree(root, *, values: bool = False, dark: bool = False, figsi
         stack.extend(cur.children)
     auto = f"Rekursionsbaum  ({n} Aufrufe)"
     return plot_syntax_tree(proxy, dark=dark, figsize=figsize, title=auto if title is None else title)
+
+
+def plot_tiling(grid, hole=None, *, dark: bool = False, figsize=None, title=None):
+    """
+    Parkettierung mit Winkel-Fliesen (Serie 7, Aufgabe 8): `grid` ist eine quadratische Liste von Zeilen mit der
+    Fliesen-Nummer je Feld (0 = frei). Die Fliesen sind grau abgestuft und dick umrandet, das freie Feld ist rot.
+
+        plot_tiling(tile_board(3, (5, 2)).grid, (5, 2))
+    """
+    if (not isinstance(grid, (list, tuple)) or not grid or any(not isinstance(r, (list, tuple)) or len(r) != len(grid) for r in grid)):
+        raise ValueError("plot_tiling: grid muss eine quadratische Liste von Zeilen sein")
+    size = len(grid)
+    if size > 64:
+        raise ValueError("plot_tiling: höchstens 64 × 64 Felder")
+    from matplotlib.patches import Rectangle
+    with _style(dark) as th:
+        fig = _new_figure(_check_size(figsize) or (6.4, 6.4), th, layout="constrained")
+        ax = fig.add_subplot()
+        shades = [th["soft"], th["grid"], th["muted"]]
+        for r in range(size):
+            for c in range(size):
+                t = grid[r][c]
+                free = (hole is not None and (r, c) == tuple(hole)) or t == 0
+                ax.add_patch(Rectangle((c, size - 1 - r), 1, 1, facecolor=th["red"] if free else shades[int(t) % 3],
+                                       edgecolor=th["bg"], linewidth=0.6))
+        for r in range(size):                                        # dicke Linien zwischen verschiedenen Fliesen
+            for c in range(size):
+                if c + 1 < size and grid[r][c] != grid[r][c + 1]:
+                    ax.plot([c + 1, c + 1], [size - 1 - r, size - r], color=th["fg"], linewidth=2.0)
+                if r + 1 < size and grid[r][c] != grid[r + 1][c]:
+                    ax.plot([c, c + 1], [size - 1 - r, size - 1 - r], color=th["fg"], linewidth=2.0)
+        ax.add_patch(Rectangle((0, 0), size, size, fill=False, edgecolor=th["fg"], linewidth=2.0))
+        ax.set_xlim(-0.05, size + 0.05)
+        ax.set_ylim(-0.05, size + 0.05)
+        ax.set_aspect("equal")
+        ax.axis("off")
+        tiles = len({v for row in grid for v in row if v})
+        ax.set_title(f"Parkettierung  ({tiles} Winkel-Fliesen)" if title is None else title, color=th["fg"])
+        return fig
 
 
 # ==========================================================================
