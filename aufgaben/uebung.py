@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Selbst programmieren: Gerüste und Prüfstände für die Algorithmen der Serien 1 bis 6.
+Selbst programmieren: Gerüste und Prüfstände für die Algorithmen der Serien 1 bis 8.
 
 Wie bei lialkit steht hier keine Lösung. Du schreibst die Funktion selbst, rufst `pruefe_...` damit auf
 und siehst sofort, ob sie an den Beispielen der Serien und an den Randfällen besteht, die gern
@@ -42,6 +42,7 @@ __all__ = [
     "pruefe_dec_to_bin", "pruefe_binaer_zu_dezimal", "pruefe_forall", "pruefe_exists", "pruefe_hat_duplikate",
     "pruefe_palindrom", "pruefe_wahrheitstabelle", "pruefe_folgerung", "pruefe_resolvente",
     "pruefe_lineare_suche", "pruefe_selection_sort", "pruefe_merge_sort", "pruefe_hanoi",
+    "pruefe_muenzen", "pruefe_ueberdeckung", "pruefe_quick_sort", "pruefe_ungerade_zahlen",
     "pruefe_klassifikation", "pruefe_potenzmenge", "pruefe_dezimal_zu_bruch", "pruefe_binaer_nachkomma",
 ]
 
@@ -171,6 +172,46 @@ def meine_hanoi(n, start, ziel, hilf):
     # TODO: n-1 Scheiben von start auf den Hilfspfosten (rekursiv)
     # TODO: die grösste Scheibe n von start nach ziel
     # TODO: n-1 Scheiben vom Hilfspfosten aufs Ziel (rekursiv)
+    return []
+''',
+    "meine_muenzen": '''
+def meine_muenzen(n):
+    """Serie 7, Aufgabe 10: gibt (a, b) zurück, a Zweifränkler und b Fünffränkler mit 2*a + 5*b == n (n >= 4).
+    Rekursiv, wie der Beweis mit starker Induktion."""
+    if n == 4:
+        return (2, 0)
+    if n == 5:
+        return (0, 1)
+    # TODO: für n >= 6 die Lösung für n - 2 rekursiv holen und einen Zweifränkler dazu
+    pass
+''',
+    "meine_ueberdeckung": '''
+def meine_ueberdeckung(n, loch):
+    """Serie 7, Aufgabe 8: Parkettierung eines Bretts mit 2**n x 2**n Feldern durch Winkel-Fliesen (drei Felder, keine Linie).
+    loch = (zeile, spalte) bleibt frei. Gibt eine Liste von Fliesen zurück, jede Fliese ein Tripel von Feldern (zeile, spalte)."""
+    fliesen = []
+    # TODO: Basisfall n == 1: die drei Felder ausser dem Loch sind eine Fliese
+    # TODO: Brett in vier Quadrate teilen, eine Fliese in die Mitte legen, die drei anderen Quadrate bekommen so ein "Loch"
+    # TODO: viermal rekursiv mit n - 1 (Hilfsfunktion mit Ecke und Grösse des Quadrats)
+    return fliesen
+''',
+    "mein_quick_sort": '''
+def mein_quick_sort(a):
+    """Sortiert die Liste a aufsteigend mit quickSort (Serie 7, Aufgabe 11) und gibt eine NEUE Liste zurück; a bleibt unverändert."""
+    if len(a) <= 1:
+        return list(a)           # Basisfall
+    pivot = a[0]
+    # TODO: L = alle anderen Elemente, die kleiner als das Pivot sind; R = alle übrigen (auch gleiche)
+    # TODO: L und R rekursiv sortieren
+    # TODO: sortiertes L + [Pivot] + sortiertes R zurückgeben
+    pass
+''',
+    "meine_ungerade_zahlen": '''
+def meine_ungerade_zahlen(ziffern):
+    """Serie 8, Aufgabe 15: alle ungeraden Zahlen (ohne führende 0), die genau aus den Ziffern der Liste bestehen.
+    Gibt eine aufsteigend sortierte Liste von ganzen Zahlen ohne Doppelte zurück, z. B. [1, 3] -> [31]."""
+    # TODO: alle Anordnungen der Ziffern (itertools.permutations), doppelte Anordnungen nur einmal
+    # TODO: führende 0 und gerade letzte Ziffer aussortieren
     return []
 ''',
     "meine_klassifikation": '''
@@ -918,6 +959,125 @@ def pruefe_hanoi(funktion: Callable, ausfuehrlich: bool = True, ausgabe: bool | 
         (3, "A", "B", "C", "andere Pfosten: Namen nicht fest einbauen"), (6, "L", "R", "M", "63 Züge")]:
         _lauf(p, funktion, f"n = {n}, {start} → {ziel}", (n, start, ziel, hilf), (n, start, ziel, hilf), pruefer, h, details_soll=False)
     p.infos.append("Idee: hanoi(n−1, start, hilf, ziel); Scheibe n von start nach ziel; hanoi(n−1, hilf, ziel, start).")
+    return _abschluss(p, ausgabe, ausfuehrlich)
+
+
+# ==========================================================================
+# SW7: Mathematische Induktion
+# ==========================================================================
+def pruefe_muenzen(funktion: Callable, ausfuehrlich: bool = True, ausgabe: bool | None = None) -> Pruefung:
+    """Prüft `meine_muenzen(n)`: (a, b) mit a, b >= 0 ganz und 2a + 5b = n, für n >= 4 (Serie 7, Aufgabe 10)."""
+    p = Pruefung("Zwei- und Fünffränkler")
+
+    def pruefer(ist, soll):
+        if not isinstance(ist, (tuple, list)) or len(ist) != 2:
+            return f"Erwartet ein Paar (a, b), erhalten {_tn(ist)}: {_kurz(ist, 30)}."
+        a, b = ist
+        if not all(isinstance(x, int) and not isinstance(x, bool) for x in (a, b)):
+            return "a und b müssen ganze Zahlen sein."
+        if a < 0 or b < 0:
+            return "a und b dürfen nicht negativ sein."
+        if 2 * a + 5 * b != soll:
+            return f"2·{a} + 5·{b} = {2 * a + 5 * b}, gesucht sind {soll} Franken."
+        return None
+    for n, h in [(4, "Verankerung: 2 + 2"), (5, "Verankerung: ein Fünffränkler"), (6, "erster Schritt: 4 + 2"), (7, "5 + 2"),
+                 (8, ""), (9, ""), (11, "3·2 + 1·5"), (12, ""), (23, ""), (100, ""), (999, "Rekursion: genug Tiefe"), (1000, "")]:
+        _lauf(p, funktion, f"n = {n}", (n,), n, pruefer, h, details_soll=False)
+    p.infos.append("Idee (starke Induktion): P(4) und P(5) gelten; für n ≥ 6 kommt zur Lösung von n − 2 ein Zweifränkler dazu.")
+    return _abschluss(p, ausgabe, ausfuehrlich)
+
+
+def pruefe_ueberdeckung(funktion: Callable, ausfuehrlich: bool = True, ausgabe: bool | None = None) -> Pruefung:
+    """
+    Prüft `meine_ueberdeckung(n, loch)`: Liste von Winkel-Fliesen (je drei Felder (zeile, spalte)), die ein 2ⁿ × 2ⁿ-Brett bis auf
+    das Feld `loch` genau einmal überdecken (Serie 7, Aufgabe 8).
+    """
+    p = Pruefung("Parkettierung mit Winkel-Fliesen")
+
+    def pruefer(ist, soll):
+        n, loch = soll
+        g = 2 ** n
+        if not isinstance(ist, (list, tuple)):
+            return f"Falscher Rückgabetyp: erwartet eine Liste von Fliesen, erhalten {_tn(ist)}."
+        belegt = set()
+        for i, f in enumerate(ist, 1):
+            if not isinstance(f, (list, tuple)) or len(f) != 3 or not all(isinstance(c, (list, tuple)) and len(c) == 2 for c in f):
+                return f"Fliese {i} ist kein Tripel von Feldern (zeile, spalte): {_kurz(f, 40)}."
+            felder = [tuple(c) for c in f]
+            if len(set(felder)) != 3:
+                return f"Fliese {i} hat doppelte Felder: {_kurz(f, 40)}."
+            if not all(0 <= r < g and 0 <= c < g for r, c in felder):
+                return f"Fliese {i} liegt nicht auf dem Brett: {_kurz(f, 40)}."
+            zs, ss = {r for r, _ in felder}, {c for _, c in felder}
+            if len(zs) != 2 or len(ss) != 2 or max(zs) - min(zs) != 1 or max(ss) - min(ss) != 1:
+                return f"Fliese {i} ist kein Winkel (drei Felder eines 2×2-Blocks): {_kurz(f, 40)}."
+            if belegt & set(felder):
+                return f"Fliese {i} überdeckt ein Feld ein zweites Mal: {sorted(belegt & set(felder))[0]}."
+            belegt |= set(felder)
+        if tuple(loch) in belegt:
+            return f"Das Loch {tuple(loch)} wird überdeckt."
+        fehlt = [(r, c) for r in range(g) for c in range(g) if (r, c) not in belegt and (r, c) != tuple(loch)]
+        if fehlt:
+            return f"{len(fehlt)} Felder bleiben frei, zum Beispiel {fehlt[0]}."
+        return None
+    for n, loch, h in [(1, (0, 0), "eine einzige Fliese"), (1, (1, 0), "Loch an anderer Stelle"), (2, (0, 0), "4 + 1 Fliesen: Basisfall viermal plus Mitte"),
+                       (2, (3, 3), ""), (2, (1, 2), "Loch im Inneren"), (3, (5, 2), "21 Fliesen"), (3, (0, 7), ""), (3, (4, 4), "Loch an der Mittellinie"),
+                       (4, (7, 8), "85 Fliesen")]:
+        _lauf(p, funktion, f"n = {n}, Loch {loch}", (n, loch), (n, loch), pruefer, h, details_soll=False)
+    p.infos.append("Anzahl Fliesen: (4ⁿ − 1)/3. Induktionsschritt: eine Fliese in die Mitte, danach hat jedes der vier Quadrate ein freies Feld.")
+    return _abschluss(p, ausgabe, ausfuehrlich)
+
+
+def pruefe_quick_sort(funktion: Callable, ausfuehrlich: bool = True, ausgabe: bool | None = None) -> Pruefung:
+    """Prüft `mein_quick_sort(a)`: gibt eine neue, aufsteigend sortierte Liste zurück (Serie 7, Aufgabe 11)."""
+    p = Pruefung("quickSort")
+    rng = random.Random(7)
+
+    def pruefer(ist, soll):
+        if ist is None:
+            return "Es wurde nichts zurückgegeben. quickSort gibt die sortierte Liste mit return zurück."
+        if not isinstance(ist, list):
+            return f"Falscher Rückgabetyp: erwartet list, erhalten {_tn(ist)}."
+        if sorted(ist, key=repr) != sorted(soll, key=repr):
+            return "Es fehlen oder es kommen Elemente dazu (gleiche Werte nicht verlieren: alles ausser < Pivot gehört nach R)."
+        if ist != sorted(soll):
+            return "Die Liste ist nicht aufsteigend sortiert."
+        return None
+    for name, a, h in [
+        ("leer", [], "Basisfall: Länge 0"), ("ein Element", [4], "Basisfall: Länge 1"), ("zwei, falsch herum", [2, 1], ""),
+        ("Serie 6, Aufgabe 2", [4, 6, 5, 1, 7, 4, 3, 1], "Liste der Serie 6, mit doppelten Werten"),
+        ("schon sortiert", [1, 2, 3, 4, 5], "Pivot ist das kleinste: L ist leer"), ("absteigend", [5, 4, 3, 2, 1], ""),
+        ("doppelte Werte", [3, 2, 1, 1, 4, 4, 2, 3, 1], "gleiche Werte nicht verlieren"), ("alle gleich", [7, 7, 7, 7], "alle landen in R; die Rekursion muss trotzdem enden"),
+        ("negative Zahlen", [0, -3, 5, -1, -3], ""), ("zufällig, 50 Werte", [rng.randint(-50, 50) for _ in range(50)], "")]:
+        _lauf(p, funktion, name, (a,), a, pruefer, h)
+    p.hinweise += _quelle_hinweis(funktion, {"sorted(": "sorted() ist die fertige Lösung.", ".sort(": "list.sort() ist die fertige Lösung."})
+    p.infos.append("Erwartet: eine neue Liste; die übergebene Liste darf nicht verändert werden. Das Pivot darf beliebig gewählt werden (zufällig, erstes, mittleres).")
+    return _abschluss(p, ausgabe, ausfuehrlich)
+
+
+# ==========================================================================
+# SW8: Zähltechniken
+# ==========================================================================
+def pruefe_ungerade_zahlen(funktion: Callable, ausfuehrlich: bool = True, ausgabe: bool | None = None) -> Pruefung:
+    """Prüft `meine_ungerade_zahlen(ziffern)`: sortierte Liste aller ungeraden Zahlen ohne führende 0 aus genau diesen Ziffern (Serie 8, Aufgabe 15)."""
+    p = Pruefung("Ungerade Zahlen aus Ziffern")
+
+    def pruefer(ist, soll):
+        if not isinstance(ist, list):
+            return f"Falscher Rückgabetyp: erwartet list, erhalten {_tn(ist)}."
+        if not all(isinstance(x, int) and not isinstance(x, bool) for x in ist):
+            return "Die Liste soll ganze Zahlen enthalten (keine Texte)."
+        if len(ist) != len(set(ist)):
+            return "Doppelte Zahlen: gleiche Ziffern vertauscht ergeben dieselbe Zahl, jede Zahl nur einmal."
+        if ist != soll:
+            return f"Falsch: {len(ist)} Zahlen statt {len(soll)} (sortiert aufsteigend, keine führende 0, letzte Ziffer ungerade)."
+        return None
+    for name, z, h in [("Serie 8, Aufgabe 15", [1, 2, 3, 3, 0, 0, 0], "90 Zahlen"), ("eine Ziffer", [7], ""), ("keine ungerade Ziffer", [2, 4], "leere Liste"),
+                       ("führende 0", [0, 1], "nur 10 ist keine Lösung, 01 zählt nicht: leere Liste"), ("alle gleich", [5, 5, 5], "nur 555"),
+                       ("drei Ziffern", [1, 2, 3], ""), ("mit Nullen", [1, 0, 0], "nur 001, 010 sind keine Lösung: 100 ist gerade")]:
+        soll = sorted({int("".join(map(str, q))) for q in itertools.permutations(z) if q[0] != 0 and q[-1] % 2 == 1})
+        _lauf(p, funktion, name, (z,), soll, pruefer, h)
+    p.infos.append("Ansatz: Anzahl nach der Zählregel bestimmen (Permutationen mit Wiederholungen) und die Liste damit prüfen.")
     return _abschluss(p, ausgabe, ausfuehrlich)
 
 

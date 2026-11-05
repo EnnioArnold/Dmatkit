@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Die Aufgaben der Übungsserien 1 bis 6 (DMATH-ALGO) — als Daten, mit Selbstkontrolle.
+Die Aufgaben der Übungsserien 1 bis 8 (DMATH-ALGO) — als Daten, mit Selbstkontrolle.
 
 Jede Aufgabe ist ein Datensatz
 
@@ -44,9 +44,11 @@ import sympy as sp
 from ..rechnen import algorithmen as ag
 from ..rechnen import aussagenlogik as al
 from ..rechnen import datentypen as dt
+from ..rechnen import induktion as ind
 from ..rechnen import kalkuel as ka
 from ..rechnen import praedikate as pr
 from ..rechnen import rekursion as rk
+from ..rechnen import zaehlen as zl
 from ..rechnen.render import Result, Step, Table, text_any
 
 __all__ = ["Exercise", "Erwartung", "Bericht", "Gesamtbericht", "Sammlung", "EXERCISES",
@@ -346,10 +348,10 @@ def _woche(week) -> int | None:
     else:
         m = re.fullmatch(r"\s*(?:SW|LG|S)?\s*(\d+)\s*", str(week), flags=re.I)
         if not m:
-            raise KeyError(f"Unbekannte Woche {week!r}. Gemeint ist eine Zahl von 1 bis 6 oder »SW3«.")
+            raise KeyError(f"Unbekannte Woche {week!r}. Gemeint ist eine Zahl von 1 bis 8 oder »SW3«.")
         w = int(m.group(1))
     if w not in {e.week for e in EXERCISES.values()}:
-        raise KeyError(f"Für Woche {week!r} gibt es keine Aufgaben. Vorhanden sind Wochen 1 bis 6.")
+        raise KeyError(f"Für Woche {week!r} gibt es keine Aufgaben. Vorhanden sind Wochen 1 bis 8.")
     return w
 
 
@@ -381,7 +383,7 @@ def _schluessel(id: str) -> str:
     nah = difflib.get_close_matches(low, list(_LOWER), n=4, cutoff=0.6)
     if nah:
         raise KeyError(f"Unbekannte Aufgabe {id!r}. Gemeint: {', '.join(_LOWER[n] for n in nah)}")
-    raise KeyError(f"Unbekannte Aufgabe {id!r}. `liste()` zeigt alle Schlüssel (Woche: SW1 bis SW6).")
+    raise KeyError(f"Unbekannte Aufgabe {id!r}. `liste()` zeigt alle Schlüssel (Woche: SW1 bis SW8).")
 
 
 def aufgabe(id: str) -> Exercise:
@@ -1961,6 +1963,288 @@ _ex("SW6.B2", "Hanoi: Zuganzahl 2ⁿ − 1", "Wie viele Züge braucht der Turm m
     [E("T(n) = 2ⁿ − 1 (Iteration)", lambda r: [r.at(n) for n in range(1, 11)], [2 ** n - 1 for n in range(1, 11)], "von Hand: T(n) = 2T(n−1) + 1"),
      E("n = 64 (Legende der Serie): 2⁶⁴ − 1 Züge", lambda r: r.at(64), 2 ** 64 - 1, "von Hand")],
     "T(n) = 2·T(n−1) + 1: die n−1 Scheiben zweimal, dazu ein Zug.", source="Serie 6, Aufgabe 3 (Zuganzahl; Rekursionsbeziehung eigene Herleitung)")
+
+
+# ==========================================================================
+# Serie 7 — Mathematische Induktion
+# ==========================================================================
+# In den Unterlagen steht nur die Aufgabenstellung (keine Musterlösung). Die Beweise sind eigene Rechnungen; die Soll-Werte
+# stammen aus unabhängigen Python-Schleifen (Summen, Reste, Brute Force), nicht aus dem Modul.
+import random as _random
+
+
+def _parkett_ok(grid, hole):
+    """Jedes Feld ausser hole genau einmal, jede Fliese = 3 Felder eines 2×2-Blocks (ein Winkel)."""
+    n = len(grid)
+    fliesen = {}
+    for r in range(n):
+        for c in range(n):
+            if (r, c) == hole:
+                if grid[r][c] != 0:
+                    return False
+            else:
+                fliesen.setdefault(grid[r][c], []).append((r, c))
+    return 0 not in fliesen and all(
+        len(v) == 3 and max(p[0] for p in v) - min(p[0] for p in v) == 1 and max(p[1] for p in v) - min(p[1] for p in v) == 1
+        for v in fliesen.values())
+
+
+def _springer_ok(weg, n):
+    """Nur Springerzüge, alle n² Felder kommen vor."""
+    return (all(abs(a[0] - b[0]) * abs(a[1] - b[1]) == 2 for a, b in zip(weg, weg[1:]))
+            and set(weg) == {(r, c) for r in range(n) for c in range(n)})
+
+
+_SW7 = {  # Aufgabe: (Titel, Aufgabentext, Summand, Formel, Grenzen, Python-Schleife als Gegenprobe)
+    "1": ("Summe mit Startwert s und Schrittweite d", "Ist summe(s, n, d) = n*s + n*(n-1)/2*d eine korrekte Implementierung für s + (s+d) + (s+2d) + … + (s+(n−1)d)?",
+          "s + i*d", "n*s + n*(n-1)/2*d", dict(first=0, last="n-1"), lambda n: all(sum(s + k * d for k in range(n)) * 2 == 2 * n * s + n * (n - 1) * d for s in (-3, 0, 4) for d in (-2, 0, 5))),
+    "2": ("Geometrische Summe", "Zeigen Sie mit schwacher Induktion die Korrektheit von summe(s, n, q) = s*(q**n-1)/(q-1) für s + sq + sq² + … + sq^(n−1).",
+          "s*q**i", "s*(q**n - 1)/(q - 1)", dict(first=0, last="n-1"), lambda n: all(sum(s * q ** k for k in range(n)) * (q - 1) == s * (q ** n - 1) for s in (-3, 1, 4) for q in (-2, 2, 3, 5))),
+    "3": ("Summe der Quadratzahlen", "Zeigen Sie mit schwacher Induktion die Korrektheit von summQuad(n) = n*(n+1)*(2*n+1)/6 für 1² + 2² + … + n².",
+          "i**2", "n*(n+1)*(2*n+1)/6", {}, lambda n: sum(k * k for k in range(1, n + 1)) * 6 == n * (n + 1) * (2 * n + 1)),
+    "4": ("Summe der ungeraden Zahlen", "Zeigen Sie mit schwacher Induktion die Korrektheit von summe(s, n, q) = n**2 für 1 + 3 + 5 + … + (2n−1).",
+          "2*i - 1", "n**2", {}, lambda n: sum(2 * k - 1 for k in range(1, n + 1)) == n * n),
+}
+for _k, (_t, _task, _term, _closed, _kw, _loop) in _SW7.items():
+    _ex(f"SW7.{_k}", _t, _task, (lambda t=_term, c=_closed, kw=_kw: ind.prove_sum(t, c, **kw)),
+        [E("Verankerung und Induktionsschritt gelingen", lambda r: (r.anchor_ok, r.step_ok, r.valid), (True, True, True), "eigene Rechnung, Induktionsschritt algebraisch"),
+         E("Induktionsschritt: Differenz = 0", lambda r: r.difference, 0, "von Hand umgeformt"),
+         E("Gegenprobe: Schleife und Formel stimmen für n = 1 … 40 überein", lambda r, f=_loop: all(f(n) for n in range(1, 41)), True, "unabhängig: Python-Schleife"),
+         E("Probe im Rechenweg ohne Gegenbeispiel", lambda r: r.counterexample, None, "Summe ausgerechnet")],
+        "P(n) aufstellen, Verankerung mit n₀ nachrechnen, im Schritt die Induktionsvoraussetzung einsetzen und die rechte Seite von P(n+1) herausbekommen.",
+        source=f"Serie 7, Aufgabe {_k}; Lösung eigen" + ("; die Serie nennt den Algorithmus summe(s, n, q), gemeint ist n**2" if _k == "4" else ""))
+_ex("SW7.B1", "Summe mit d und s, falsche Formel", "Wäre n*s + n*(n+1)/2*d (statt n−1) auch korrekt? (Gegenprobe zu Aufgabe 1)",
+    lambda: ind.prove_sum("s + i*d", "n*s + n*(n+1)/2*d", first=0, last="n-1"),
+    [E("kein Beweis möglich", lambda r: r.valid, False, "von Hand: n = 1 gibt 2s statt s"),
+     E("Gegenbeispiel schon bei n = 1", lambda r: r.counterexample, 1, "von Hand")],
+    "Wenn die Verankerung schon falsch ist, ist die Behauptung falsch; der Schritt allein genügt nicht.", source="Serie 7, Aufgabe 1 (Gegenprobe, eigene Variante); Lösung eigen")
+_ex("SW7.5", "while-Schleife mit 8ⁿ − 3ⁿ terminiert nie", "Zeigen Sie mit schwacher Induktion, dass while (8**n - 3**n) % 5 == 0 nicht terminiert.",
+    lambda: ind.prove_divisible(8, 3, 5),
+    [E("Verankerung (n = 0) und Schritt gelingen", lambda r: (r.anchor_ok, r.step_ok, r.valid), (True, True, True), "eigene Rechnung: 8ⁿ⁺¹ − 3ⁿ⁺¹ = 8·(8ⁿ − 3ⁿ) + 5·3ⁿ"),
+     E("Bedingung ist für n = 0 … 499 wahr", lambda r: all((8 ** n - 3 ** n) % 5 == 0 for n in range(500)), True, "unabhängig: Python-Schleife")],
+    "P(n): 5 teilt 8ⁿ − 3ⁿ. Umformen: 8ⁿ⁺¹ − 3ⁿ⁺¹ = 8·(8ⁿ − 3ⁿ) + 5·3ⁿ.", source="Serie 7, Aufgabe 5; Lösung eigen")
+_ex("SW7.6", "while-Schleife mit 9ⁿ mod 10 terminiert nie", "Zeigen Sie mit schwacher Induktion, dass while 9**n%10 == 1 or 9**n%10 == 9 nicht terminiert.",
+    lambda: ind.prove_residue(9, 10, [1, 9]),
+    [E("Verankerung (n = 0: Rest 1) und Schritt gelingen", lambda r: (r.anchor_ok, r.step_ok, r.valid), (True, True, True), "eigene Rechnung: 9·1 = 9, 9·9 = 81 → 1"),
+     E("Rest ist für n = 0 … 499 immer 1 oder 9", lambda r: all(pow(9, n, 10) in (1, 9) for n in range(500)), True, "unabhängig: Python pow(9, n, 10)")],
+    "P(n): 9ⁿ mod 10 ∈ {1, 9}. Im Schritt beide Fälle einzeln: 9·1 = 9, 9·9 = 81 ≡ 1.", source="Serie 7, Aufgabe 6; Lösung eigen")
+_ex("SW7.7", "while-Schleife mit 2ⁿ mod 7 terminiert nie", "Zeigen Sie mit schwacher Induktion, dass while 2**n%7 == 1 or 2**n%7 == 2 or 2**n%7 == 4 nicht terminiert.",
+    lambda: ind.prove_residue(2, 7, [1, 2, 4]),
+    [E("Verankerung (n = 0: Rest 1) und Schritt gelingen", lambda r: (r.anchor_ok, r.step_ok, r.valid), (True, True, True), "eigene Rechnung: 2·1 = 2, 2·2 = 4, 2·4 = 8 ≡ 1"),
+     E("Rest ist für n = 0 … 499 immer 1, 2 oder 4", lambda r: all(pow(2, n, 7) in (1, 2, 4) for n in range(500)), True, "unabhängig: Python pow(2, n, 7)")],
+    "P(n): 2ⁿ mod 7 ∈ {1, 2, 4}. Drei Fälle im Schritt.", source="Serie 7, Aufgabe 7; Lösung eigen")
+_ex("SW7.8", "Parkettierung mit Winkel-Fliesen", "findeÜberdeckung(n): Parkettierung eines 2ⁿ × 2ⁿ-Schachbretts mit Winkel-Fliesen, ein Feld bleibt frei. Zeigen Sie mit schwacher Induktion, dass das immer geht (hier n = 3, freies Feld (5, 2)).",
+    lambda: ind.tile_board(3, (5, 2)),
+    [E("21 = (4³ − 1)/3 Fliesen", lambda r: r.tiles, (4 ** 3 - 1) // 3, "von Hand"),
+     E("alle Felder ausser (5, 2) genau einmal, jede Fliese ein Winkel", lambda r: _parkett_ok(r.grid, r.hole), True, "unabhängig nachgeprüft"),
+     E("jedes der 64 Felder kann das freie sein", lambda r: all(_parkett_ok(ind.tile_board(3, (a, b)).grid, (a, b)) for a in range(8) for b in range(8)), True, "unabhängig nachgeprüft")],
+    "Brett in vier Quadrate teilen, eine Fliese in die Mitte, dann viermal dasselbe mit n−1 (Induktionsschritt = Rekursion).", source="Serie 7, Aufgabe 8; Lösung eigen")
+_ex("SW7.9", "Springerweg über alle Felder (optional)", "findeWeg(n): ein Weg für einen Springer auf einem n×n-Brett (n ≥ 4), der jedes Feld mindestens einmal besucht (hier n = 5).",
+    lambda: ind.knight_walk(5),
+    [E("nur Springerzüge, alle 25 Felder besucht", lambda r: _springer_ok(r.path, 5), True, "unabhängig nachgeprüft"),
+     E("auch n = 4 … 10 gelingen", lambda r: all(_springer_ok(ind.knight_walk(m).path, m) for m in range(4, 11)), True, "unabhängig nachgeprüft")],
+    "Der Weg wird konstruiert und geprüft; der Induktionsbeweis selbst (Rand um ein Brett legen) ist nicht ausgearbeitet. TODO: mit der Vorlesung abgleichen.", kind="optional",
+    source="Serie 7, Aufgabe 9 (optional); Lösung eigen, Beweis TODO")
+_ex("SW7.10", "Zwei- und Fünffränkler (starke Induktion)", "münzen(n): für n ≥ 4 Franken Anzahlen a, b ≥ 0 von Zwei- und Fünffränklern mit 2a + 5b = n. Zeigen Sie mit starker Induktion, dass es sie immer gibt (hier n = 11).",
+    lambda: ind.coins(11),
+    [E("11 = 3·2 + 1·5", lambda r: (r.a, r.b), (3, 1), "von Hand"),
+     E("für n = 4 … 300 gibt es eine Zerlegung", lambda r: all(2 * ind.coins(n).a + 5 * ind.coins(n).b == n and ind.coins(n).a >= 0 and ind.coins(n).b >= 0 for n in range(4, 301)), True, "unabhängig nachgerechnet"),
+     E("von 1 bis 3 geht nur 2 (1 und 3 nicht)", lambda r: [n for n in range(1, 4) if any(2 * a + 5 * b == n for a in range(3) for b in range(2))], [2], "Brute Force")],
+    "Zwei Verankerungen P(4), P(5). Schritt: n+1 ≥ 6 aus n−1 ≥ 4 durch einen Zweifränkler mehr (starke Induktion).", source="Serie 7, Aufgabe 10; Lösung eigen")
+_ex("SW7.11", "Korrektheit von quickSort (starke Induktion)", "Zeigen Sie mit starker Induktion die Korrektheit von quickSort (Pivot zufällig; hier mit A = [4, 6, 5, 1, 7, 4, 3, 1] ausgeführt).",
+    lambda: ind.quick_sort([4, 6, 5, 1, 7, 4, 3, 1], pivot="first"),
+    [E("sortierte Liste", lambda r: r.value, [1, 1, 3, 4, 4, 5, 6, 7], "Python sorted()"),
+     E("jede Teilliste ist kürzer als die Eingabe (starke Induktion)", lambda r: all(len(k.children[0].value) + len(k.children[1].value) == len(k.value) - 1 for k in r.nodes if k.children), True, "von Hand: |L| + |R| = n"),
+     E("200 zufällige Listen mit zufälligem Pivot", lambda r: (lambda rng: all(ind.quick_sort(a, seed=rng.random()).value == sorted(a) for a in ([rng.randint(-5, 5) for _ in range(rng.randint(1, 20))] for _ in range(200))))(_random.Random(7)), True, "unabhängig: Python sorted()")],
+    "L und R sind kürzer als A, darum darf P für alle kleineren Längen benutzt werden; L < Pivot ≤ R.", source="Serie 7, Aufgabe 11; Lösung eigen")
+
+
+# ==========================================================================
+# Serie 8 — Grundlegende Zähltechniken
+# ==========================================================================
+# In den Unterlagen steht nur die Aufgabenstellung (keine Musterlösung). Die Soll-Werte sind eigene Rechnungen, unabhängig mit
+# Python (math, itertools, Brute Force) bestimmt.
+import itertools as _it
+
+_fa = _math.factorial
+_cnt = lambda r: r.count      # noqa: E731
+
+
+def _x(id, title, task, call, soll, quelle, hint, extra=(), source=""):
+    """Aufgabe der Serie 8: Anzahl (`count`) gegen den unabhängig gerechneten Wert; `extra` = weitere Erwartungen."""
+    _ex(id, title, task, call, [E(f"{_fmt_zahl(soll)}", _cnt, soll, quelle), *extra], hint, source=source)
+
+
+def _wege_ueber(rechts, hoch, punkt):
+    """Alle kürzesten Wege (Wörter aus R und O) ablaufen und die zählen, die über ``punkt`` führen."""
+    n = 0
+    for pos in _it.combinations(range(rechts + hoch), rechts):
+        x = y = 0
+        trifft = (x, y) == punkt
+        for t in range(rechts + hoch):
+            x, y = (x + 1, y) if t in pos else (x, y + 1)
+            trifft = trifft or (x, y) == punkt
+        n += trifft
+    return n
+
+
+def _fmt_zahl(v):
+    return f"{v:,}".replace(",", "’")
+
+
+_x("SW8.1", "8-Bit-Datenworte mit genau 2 Einsen", "Wie viele Datenworte der Länge 8 Bit gibt es, die genau 2 Einsen enthalten?",
+   lambda: zl.count_bitwords(8, ones=2), 28, "Brute Force über alle 256 Bytes",
+   "Partition nach den Stellen der beiden Einsen: C(8, 2) = 8·7/2.",
+   [E("Brute Force: alle 256 Wörter durchzählen", lambda r: sum(1 for w in range(256) if bin(w).count("1") == 2), 28, "unabhängig")],
+   source="Serie 8, Aufgabe 1; Lösung eigen")
+_x("SW8.2", "64-Bit-Datenworte mit genau 2 Einsen", "Wie viele Datenworte der Länge 64 Bit gibt es, die genau 2 Einsen enthalten?",
+   lambda: zl.count_bitwords(64, ones=2), 2016, "von Hand: 64·63/2", "Wie Aufgabe 1: C(64, 2).", source="Serie 8, Aufgabe 2; Lösung eigen")
+_x("SW8.3", "16-Bit-Datenworte", "Wie viele Datenworte der Länge 16 Bit gibt es maximal?",
+   lambda: zl.count_bitwords(16), 65536, "Python 2**16", "Produktregel: 2·2·…·2 (16 Mal).", source="Serie 8, Aufgabe 3; Lösung eigen")
+_x("SW8.4", "URLs der Länge 7", "Wie viele URLs der Länge 7 gibt es, wenn Ziffern, Gross- und Kleinbuchstaben zulässige Zeichen sind?",
+   lambda: zl.product_rule(*[62] * 7), 62 ** 7, "Python 62**7 = 3 521 614 606 208", "10 + 26 + 26 = 62 Zeichen (Summenregel), sieben Stellen (Produktregel).",
+   source="Serie 8, Aufgabe 4; Lösung eigen")
+_x("SW8.5", "MAC-Adressen", "Wie viele verschiedene MAC-Adressen gibt es (sechs Paare hexadezimaler Ziffern)?",
+   lambda: zl.count_variations(16, 12, repetition=True), 16 ** 12, "Python 16**12 = 2**48",
+   "Zwölf hexadezimale Stellen, je 16 Möglichkeiten; die Doppelpunkte zählen nicht.",
+   [E("= 2⁴⁸", _cnt, 2 ** 48, "von Hand: 16 = 2⁴")], source="Serie 8, Aufgabe 5; Lösung eigen")
+_ex("SW8.6", "Mächtigkeit der Potenzmenge", "Wie gross ist für eine endliche Menge A die Kardinalität von P(A)? (Zuordnung zu Bitwörtern, hier |A| = 2 mit {schwarz, weiss})",
+    lambda: zl.count_subsets(objects=["schwarz", "weiss"]),
+    [E("|P({schwarz, weiss})| = 4", _cnt, 4, "Beispiel der Serie: { }, {schwarz}, {weiss}, {schwarz, weiss}"),
+     E("allgemein 2ⁿ für n = 0 … 10 (alle Teilmengen aufgezählt)", lambda r: all(zl.count_subsets(n).count == sum(1 for k in range(n + 1) for _ in _it.combinations(range(n), k)) for n in range(11)), True, "unabhängig: itertools")],
+    "Jedem Element ein Bit: drin = 1. Teilmengen ↔ Bitwörter (bijektiv), also 2ⁿ.", source="Serie 8, Aufgabe 6; Lösung eigen")
+_x("SW8.7", "Handshakes unter 1000 Rechnern", "Wie viele Verbindungen zwischen zwei verschiedenen Rechnern müssen bei 1000 Rechnern insgesamt aufgebaut werden?",
+   lambda: zl.assignment_rule(1000 * 999, 2), 1000 * 999 // 2, "von Hand: 1000·999/2",
+   "Geordnete Paare 1000·999, jede Verbindung kommt zweimal vor (Zuordnungsregel mit k = 2) = C(1000, 2).",
+   [E("= C(1000, 2)", _cnt, _math.comb(1000, 2), "math.comb")], source="Serie 8, Aufgabe 7; Lösung eigen")
+_A8 = sum(62 ** k for k in range(6, 9))
+_x("SW8.8a", "Passwörter mit 6 bis 8 Zeichen", "Ein Passwort besteht aus sechs bis acht Zeichen (Kleinbuchstaben, Grossbuchstaben, Ziffern). Wie viele gibt es?",
+   lambda: zl.sum_rule(*[zl.product_rule(*[62] * k).count for k in (6, 7, 8)]), _A8, "Python 62**6 + 62**7 + 62**8",
+   "Nach der Länge aufteilen (Summenregel), je Länge 62ᵏ (Produktregel).", source="Serie 8, Aufgabe 8 a; Lösung eigen")
+_x("SW8.8b", "Passwörter mit mindestens einer Ziffer", "Wie viele dieser Passwörter enthalten mindestens eine Ziffer?",
+   lambda: zl.complement_rule(_A8, sum(52 ** k for k in range(6, 9))), _A8 - sum(52 ** k for k in range(6, 9)), "Python: alle minus ohne Ziffer (52 Buchstaben)",
+   "Gegenteil zählen: alle Passwörter minus die ohne Ziffer (nur 52 Buchstaben).", source="Serie 8, Aufgabe 8 b; Lösung eigen")
+_x("SW8.9", "EuroMillions-Datei", "Alle gültigen Einzeltipps (5 aus 50, 2 Sterne aus 12) stehen zeilenweise in einer Datei, eine Zeile hat 29 Byte. Wie viel Speicherplatz braucht die Datei?",
+   lambda: zl.product_rule(zl.count_combinations(50, 5).count, zl.count_combinations(12, 2).count, 29), _math.comb(50, 5) * _math.comb(12, 2) * 29,
+   "Python math.comb: 139 838 160 Zeilen · 29 Byte = 4 055 306 640 Byte",
+   "Produktregel: C(50, 5) Zahlenwahlen mal C(12, 2) Sternwahlen mal 29 Byte je Zeile; die Reihenfolge der Zahlen ist egal. ≈ 3,78 GiB.",
+   source="Serie 8, Aufgabe 9; Lösung eigen")
+_x("SW8.10", "42 Threads auf 4 Prozessoren", "Ein Betriebssystem muss 42 Kernel-Threads 4 Prozessoren zuordnen; nur die Anzahl je Prozessor zählt. Wie viele Verteilungen sind theoretisch möglich?",
+   lambda: zl.count_combinations(4, 42, repetition=True), 14190, "Brute Force: a + b + c ≤ 42, vierter Prozessor = Rest",
+   "Kombinationen mit Wiederholungen: 42 Stück aus 4 Sorten, C(45, 42) = C(45, 3).",
+   [E("Brute Force über (a, b, c, d) mit Summe 42", lambda r: sum(1 for a in range(43) for b in range(43 - a) for c in range(43 - a - b)), 14190, "unabhängig")],
+   source="Serie 8, Aufgabe 10; Lösung eigen")
+_x("SW8.11", "Unleserliches WLAN-Passwort", "Im Passwort a154bc0401011 ist 1 entweder 1, l oder I, und 0 entweder 0 oder O. Wie viele Passwörter müssen getestet werden, bevor alle Möglichkeiten ausgeschöpft sind?",
+   lambda: zl.product_rule(*[3] * "a154bc0401011".count("1"), *[2] * "a154bc0401011".count("0")), 648, "von Hand: vier Einsen, drei Nullen: 3⁴·2³",
+   "Produktregel: vier Stellen mit 3 Möglichkeiten, drei Stellen mit 2. TODO: ob die richtige Möglichkeit mitzählt (648) oder 647 Fehlversuche gemeint sind, mit der Vorlesung abgleichen.",
+   [E("Zeichen im Passwort: vier ›1‹, drei ›0‹", lambda r: ("a154bc0401011".count("1"), "a154bc0401011".count("0")), (4, 3), "von Hand ausgezählt")],
+   source="Serie 8, Aufgabe 11; Lösung eigen")
+_W = "EEEEAEACCEBEBBAACBDDBDBABCBCB"
+_ex("SW8.12a", "Warteschlangen: alle", "Wie viele verschiedene Warteschlangen gibt es bei 5 Paketen A, 9 B, 5 C, 3 D und 7 E?",
+    lambda: zl.count_permutations(repeats=[5, 9, 5, 3, 7]),
+    [E("29!/(5!·9!·5!·3!·7!)", _cnt, _fa(29) // (_fa(5) * _fa(9) * _fa(5) * _fa(3) * _fa(7)), "Python math.factorial"),
+     E("Beispiel-Warteschlange hat 29 Pakete mit den richtigen Anzahlen", lambda r: (len(_W), [_W.count(x) for x in "ABCDE"]), (29, [5, 9, 5, 3, 7]), "von Hand ausgezählt")],
+    "Permutationen mit Wiederholungen: n!/(s₁!·…·s_k!).", source="Serie 8, Aufgabe 12 a; Lösung eigen")
+_ex("SW8.12b", "Warteschlangen: alle A nebeneinander", "Bei wie vielen Warteschlangen stehen alle fünf Pakete mit Adresse A nebeneinander?",
+    lambda: zl.count_permutations(repeats=[1, 9, 5, 3, 7]),
+    [E("25!/(9!·5!·3!·7!)", _cnt, _fa(25) // (_fa(9) * _fa(5) * _fa(3) * _fa(7)), "Python math.factorial"),
+     E("Brute Force am Modell 2 A, 2 B, 1 C: A-Block ↔ 4!/2! = 12 Anordnungen", lambda r: sum(1 for x in set(_it.permutations("AABBC")) if "AA" in "".join(x)), 12, "unabhängig: itertools")],
+    "Die fünf A zu einem Block zusammenfassen: 1 Block und 24 andere Pakete, also 25 Plätze.", source="Serie 8, Aufgabe 12 b; Lösung eigen")
+_ex("SW8.12c", "Warteschlangen: je Adresse nebeneinander", "Bei wie vielen Warteschlangen stehen alle Pakete mit gleicher Adresse nebeneinander?",
+    lambda: zl.count_permutations(5),
+    [E("5! = 120", _cnt, 120, "von Hand: fünf Blöcke in beliebiger Reihenfolge"),
+     E("Brute Force am Modell AABBC: 3! = 6", lambda r: sum(1 for x in set(_it.permutations("AABBC")) if "AA" in "".join(x) and "BB" in "".join(x)), 6, "unabhängig: itertools")],
+    "Jede Adresse bildet einen Block: nur die Reihenfolge der 5 Blöcke zählt.", source="Serie 8, Aufgabe 12 c; Lösung eigen")
+_x("SW8.13", "32-Bit-Datenworte mit höchstens 8 Einsen", "Wie viele 32-Bit-Datenworte mit höchstens 8 Einsen gibt es?",
+   lambda: zl.count_bitwords(32, at_most=8), sum(_math.comb(32, j) for j in range(9)), "Python: Σ math.comb(32, j), j = 0 … 8 = 15 033 173",
+   "Nach der Anzahl j der Einsen aufteilen (Summenregel), je j: C(32, j).", source="Serie 8, Aufgabe 13; Lösung eigen")
+_x("SW8.14a", "Verbindungen im Neuronalen Netz", "Netz mit Schichten 10, 20, 15 und 3 Neuronen, je Neuron mit allen der nächsten Schicht verbunden. Wie viele Verbindungen hat es?",
+   lambda: zl.sum_rule(zl.product_rule(10, 20).count, zl.product_rule(20, 15).count, zl.product_rule(15, 3).count), 545, "von Hand: 200 + 300 + 45",
+   "Je Schichtpaar die Produktregel, die drei Paare addieren (Summenregel).", source="Serie 8, Aufgabe 14 a; Lösung eigen")
+_x("SW8.14b", "Wege durchs Neuronale Netz", "Wie viele Wege gibt es von einem Neuron im Input Layer zu einem Neuron im Output Layer?",
+   lambda: zl.product_rule(20, 15), 300, "von Hand: 20 Wege über First Hidden, dann 15 über Second Hidden",
+   "Für ein festes Paar Input/Output: je ein Neuron aus den beiden Hidden Layern (Produktregel). TODO: gefragt sein könnten auch alle Paare (10·300·3 = 9000), mit der Vorlesung abgleichen.",
+   source="Serie 8, Aufgabe 14 b; Lösung eigen (Deutung TODO)")
+_x("SW8.15", "Ungerade 7-stellige Zahlen aus 1, 2, 3, 3, 0, 0, 0", "Wie viele Zahlen müssten mit den Ziffern 1, 2, 3, 3, 0, 0, 0 in der Datei stehen (alle ungeraden siebenstelligen Zahlen aus genau diesen Ziffern, keine führende 0)?",
+   lambda: zl.sum_rule(
+       zl.complement_rule(zl.count_permutations(repeats=[1, 2, 3]).count, zl.count_permutations(repeats=[1, 2, 2]).count).count,
+       zl.complement_rule(zl.count_permutations(repeats=[1, 1, 1, 3]).count, zl.count_permutations(repeats=[1, 1, 1, 2]).count).count),
+   len({"".join(p) for p in _it.permutations("1233000") if p[0] != "0" and p[-1] in "13"}), "Brute Force: alle Anordnungen von 1233000, erste Ziffer ≠ 0, letzte 1 oder 3 (90)",
+   "Nach der letzten Ziffer aufteilen (1 oder 3). Je Fall: Anordnungen der übrigen sechs Ziffern minus die mit führender 0.",
+   source="Serie 8, Aufgabe 15; Lösung eigen")
+_x("SW8.16", "6 Datenworte auf 9 Register", "Auf wie viele Arten können 6 verschiedene 64-Bit-Datenworte auf 9 freie Register verteilt werden?",
+   lambda: zl.count_variations(9, 6), 9 * 8 * 7 * 6 * 5 * 4, "von Hand: 9·8·7·6·5·4 = 60 480",
+   "Variationen ohne Wiederholungen: jedes Register nimmt höchstens ein Datenwort auf; die Datenworte sind verschieden, also zählt die Reihenfolge der Wahl.",
+   source="Serie 8, Aufgabe 16; Lösung eigen")
+_x("SW8.17", "Unidirektionale Verbindungen im Switch", "Ein Switch hat 50 Ethernet-Ports. Wie viele unidirektionale Verbindungen sind maximal möglich?",
+   lambda: zl.count_variations(50, 2), 50 * 49, "von Hand: 50·49 = 2450", "Variationen ohne Wiederholungen: Sender und Empfänger, zwei verschiedene Ports, Richtung zählt.",
+   source="Serie 8, Aufgabe 17; Lösung eigen")
+_x("SW8.18", "5 von 8 Dateien verschlüsseln", "Auf wie viele Arten kann man 5 von 8 Dateien je mit einem anderen Passwort verschlüsseln, wenn 8 verschiedene Passwörter zur Verfügung stehen?",
+   lambda: zl.product_rule(zl.count_combinations(8, 5).count, zl.count_variations(8, 5).count), _math.comb(8, 5) * _math.perm(8, 5), "Python: C(8, 5)·8·7·6·5·4 = 56·6720 = 376 320",
+   "Erst die 5 Dateien wählen (Kombination), dann jeder ein anderes Passwort (Variation ohne Wiederholungen); Produktregel.",
+   source="Serie 8, Aufgabe 18; Lösung eigen")
+_x("SW8.19a", "9 Programme auf 3 Rechner, ohne Vorgaben", "Es müssen 9 verschiedene Programme auf 3 Rechner verteilt werden. Auf wie viele Arten geht das, wenn keine Vorgaben gemacht werden?",
+   lambda: zl.count_variations(3, 9, repetition=True), 3 ** 9, "Python 3**9 = 19 683", "Jedes Programm hat 3 Rechner zur Wahl: Produktregel, 3⁹.",
+   source="Serie 8, Aufgabe 19 a; Lösung eigen")
+_x("SW8.19b", "9 Programme, je Rechner drei", "… wenn auf jedem Rechner drei Programme laufen sollen?",
+   lambda: zl.count_permutations(repeats=[3, 3, 3]), _fa(9) // _fa(3) ** 3, "Python: 9!/(3!)³ = 1680; Brute Force unten",
+   "Wörter aus je drei R₁, R₂, R₃ (Rechner je Programm): Permutationen mit Wiederholungen 9!/(3!·3!·3!).",
+   [E("Brute Force: Verteilungen {0,1,2}⁹ mit je drei Treffern", lambda r: sum(1 for g in _it.product(range(3), repeat=9) if all(g.count(i) == 3 for i in range(3))), 1680, "unabhängig")],
+   source="Serie 8, Aufgabe 19 b; Lösung eigen")
+_x("SW8.19c", "9 Programme, jeder Rechner mindestens eines", "… wenn auf jedem Rechner mindestens ein Programm laufen soll?",
+   lambda: zl.count_surjections(9, 3), 18150, "Brute Force: Verteilungen {0,1,2}⁹, bei denen alle drei Rechner vorkommen",
+   "Alle 3⁹ minus die Verteilungen mit einem leeren Rechner (Siebformel, nicht in der Serie): 3⁹ − 3·2⁹ + 3. TODO: Herleitung der Vorlesung abgleichen.",
+   [E("Brute Force: alle drei Rechner kommen vor", lambda r: sum(1 for g in _it.product(range(3), repeat=9) if len(set(g)) == 3), 18150, "unabhängig")],
+   source="Serie 8, Aufgabe 19 c; Lösung eigen (Siebformel, TODO)")
+_ex("SW8.20a", "Kürzeste Wege A → B im Router-Gitter", "35 Router bilden ein 7×5-Gitter; A unten links, B oben rechts. Wie viele kürzeste Wege mit geringstem Hop-Count gibt es von A nach B?",
+    lambda: zl.lattice_paths(6, 4),
+    [E("C(10, 4) = 210", _cnt, 210, "von Hand: 6 Schritte nach rechts, 4 nach oben"),
+     E("Brute Force: alle Wörter aus 6 R und 4 O", lambda r: sum(1 for w in _it.combinations(range(10), 6)), 210, "unabhängig: itertools")],
+    "Jeder kürzeste Weg = Wort aus 6 R und 4 O (10 Schritte); Wahl der 6 Stellen für R: C(10, 6).", source="Serie 8, Aufgabe 20 a; Lösung eigen (Router C: dritte Spalte von links, dritte Reihe von unten)")
+_ex("SW8.20b", "… über den Router C", "Wie viele dieser Wege führen über den Router C (zwei nach rechts, zwei nach oben von A)?",
+    lambda: zl.lattice_paths(6, 4, via=(2, 2)),
+    [E("C(4, 2)·C(6, 2) = 6·15 = 90", _cnt, 90, "von Hand: A → C 6 Wege, C → B 15 Wege"),
+     E("Brute Force: alle 210 Wege nachgelaufen, die den Punkt (2, 2) treffen", lambda r: _wege_ueber(6, 4, (2, 2)), 90, "unabhängig: itertools")],
+    "Produktregel: Wege von A nach C mal Wege von C nach B.", source="Serie 8, Aufgabe 20 b; Lösung eigen (Lage von C aus der Zeichnung gelesen)")
+_x("SW8.21", "Ringtopologie mit 10 Rechnern", "Auf wie viele Arten können 10 Rechner in einer Ringtopologie angeordnet werden?",
+   lambda: zl.assignment_rule(_fa(10), 20), 181440, "von Hand: 10!/(10·2); Brute Force bis n = 7 im Test",
+   "10! Anordnungen in einer Reihe; ein Ring entsteht aus 10 Drehungen und 2 Spiegelungen jeder Anordnung (Zuordnungsregel, k = 20). TODO: mit der Vorlesung abgleichen (ohne Spiegelung 9! = 362 880).",
+   source="Serie 8, Aufgabe 21; Lösung eigen (Deutung TODO)")
+_x("SW8.22a", "Anzahl IPv4-Adressen", "Wie viele IPv4-Adressen gibt es maximal?",
+   lambda: zl.count_variations(2, 32, repetition=True), 2 ** 32, "Python 2**32 = 4 294 967 296", "32 Bits, je 2 Möglichkeiten: Produktregel.", source="Serie 8, Aufgabe 22 a; Lösung eigen")
+_ex("SW8.22b", "Hosts im Netz 186.13.157.160/27", "Wie viele Hosts sind im Netz 186.13.157.160/27 adressierbar?",
+    lambda: zl.ip_network("186.13.157.160/27"),
+    [E("2⁵ − 2 = 30 Hosts", lambda r: r.hosts, 30, "von Hand: 5 Hostbits"),
+     E("Bereich .161 bis .190", lambda r: (r.first_host, r.last_host), ("186.13.157.161", "186.13.157.190"), "von Hand"),
+     E("Python ipaddress: 30 Hosts", lambda r: len(list(__import__("ipaddress").IPv4Network("186.13.157.160/27").hosts())), 30, "unabhängig: Standardbibliothek")],
+    "32 − 27 = 5 Hostbits: 2⁵ Adressen, minus Netzname und Broadcast.", source="Serie 8, Aufgabe 22 b; Lösung eigen")
+_x("SW8.22c", "Anzahl IPv6-Adressen", "Wie viele IPv6-Adressen gibt es maximal (acht 4-stellige Hexadezimalzahlen)?",
+   lambda: zl.count_variations(16, 32, repetition=True), 2 ** 128, "Python 2**128 = 340 282 366 920 938 463 463 374 607 431 768 211 456",
+   "32 hexadezimale Stellen: 16³² = 2¹²⁸.", source="Serie 8, Aufgabe 22 c; Lösung eigen")
+# -- Beispiele aus dem Text der Serie ----------------------------------------------------------------------------------------------------
+_x("SW8.B1", "Summen- und Produktregel: Farben", "A = {rot, grün, blau}, B = {schwarz, weiss}: |A ∪ B| und |A × B|.",
+   lambda: zl.sum_rule(3, 2), 5, "Serie 8, Frage 1", "Disjunkte Mengen: addieren; kartesisches Produkt: multiplizieren.",
+   [E("|A × B| = 6", lambda r: zl.product_rule(3, 2).count, 6, "Serie 8, Frage 1")], source="Serie 8, Frage 1 (Beispiel im Text)")
+_x("SW8.B2", "Permutationen von a, b, c", "Wie viele Permutationen der Länge 3 gibt es aus a, b, c?",
+   lambda: zl.count_permutations(objects="abc"), 6, "Serie 8, Frage 2: sechs Listen aufgezählt", "3! = 6.",
+   [E("alle sechs Listen aufgezählt", lambda r: len(r.items), 6, "Aufzählung im Rechenweg")], source="Serie 8, Frage 2 (Beispiel im Text)")
+_x("SW8.B3", "Permutationen von a, a, a, b, c", "Wie viele Permutationen der Länge 5 gibt es aus a, a, a, b, c?",
+   lambda: zl.count_permutations(objects="aaabc"), 20, "Serie 8, Frage 2: zwanzig Listen aufgezählt", "5!/3! = 20.",
+   [E("alle zwanzig Listen aufgezählt", lambda r: len(r.items), 20, "Aufzählung im Rechenweg")], source="Serie 8, Frage 2 (Beispiel im Text)")
+_x("SW8.B4", "Variationen aus a, b, c, d (Länge 2)", "Variationen ohne Wiederholungen der Länge 2 aus a, b, c, d.",
+   lambda: zl.count_variations(objects="abcd", k=2), 12, "Serie 8, Frage 2: zwölf Listen aufgezählt", "4!/2! = 12.",
+   [E("mit Wiederholungen: 16", lambda r: zl.count_variations(objects="abcd", k=2, repetition=True).count, 16, "Serie 8, Frage 2: sechzehn Listen")],
+   source="Serie 8, Frage 2 (Beispiel im Text)")
+_x("SW8.B5", "Kombinationen aus a, b, c, d, e (Länge 3)", "Kombinationen ohne Wiederholungen der Länge 3 aus a, b, c, d, e.",
+   lambda: zl.count_combinations(objects="abcde", k=3), 10, "Serie 8, Frage 2: zehn Mengen aufgezählt", "C(5, 3) = 10.",
+   [E("mit Wiederholungen: 35", lambda r: zl.count_combinations(objects="abcde", k=3, repetition=True).count, 35, "Serie 8, Frage 2: 7 Zeilen zu je 5 Mengen")],
+   source="Serie 8, Frage 2 (Beispiel im Text)")
+_ex("SW8.B6", "CIDR-Beispiel 191.0.13.143/26", "Netzname, Broadcast und Hostbereich zu 191.0.13.143/26.",
+    lambda: zl.ip_network("191.0.13.143/26"),
+    [E("Netzname 191.0.13.128, Broadcast 191.0.13.191", lambda r: (r.network, r.broadcast), ("191.0.13.128", "191.0.13.191"), "Serie 8, Aufgabe 22"),
+     E("Hosts 191.0.13.129 – 191.0.13.190", lambda r: (r.first_host, r.last_host), ("191.0.13.129", "191.0.13.190"), "Serie 8, Aufgabe 22"),
+     E("62 Hosts", lambda r: r.hosts, 62, "von Hand: 2⁶ − 2")],
+    "Die letzten 6 Bits sind der Hostanteil.", source="Serie 8, Aufgabe 22 (Beispiel im Text)")
 
 
 # ==========================================================================

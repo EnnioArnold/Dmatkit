@@ -21,7 +21,7 @@ from dmatkit.grafik import plots as P  # noqa: E402
 from dmatkit.grafik.plots import (has_plotly, plot_bits, plot_connectives,  # noqa: E402
                                   plot_entailment, plot_growth, plot_halving,
                                   plot_quantifier, plot_recursion_tree, plot_resolution, plot_steps,
-                                  plot_syntax_tree, plot_truth_table, plotly_growth)
+                                  plot_syntax_tree, plot_tiling, plot_truth_table, plotly_growth)
 from dmatkit.rechnen.core import big_and, parse  # noqa: E402
 
 SHOTS = os.path.join(_here, "shots")
@@ -329,6 +329,16 @@ def test_recursion_tree():
     check("Rekursionsbaum  (15 Aufrufe)" in [t.get_text() for t in plot_recursion_tree(r.root).axes[0].texts])
     check(raises(ValueError, plot_recursion_tree, None))
     check(raises(ValueError, plot_recursion_tree, "summe(5)"))
+
+
+def test_tiling():
+    from dmatkit.rechnen.induktion import tile_board
+    r = tile_board(3, (5, 2))
+    _fig(plot_tiling(r.grid, r.hole), "parkettierung_8x8")
+    _fig(plot_tiling(r.grid, r.hole, dark=True, title="eigener Titel"))
+    check("Parkettierung  (21 Winkel-Fliesen)" in [t.get_text() for t in r.figure().axes[0].texts + [r.figure().axes[0].title]])
+    check(raises(ValueError, plot_tiling, None))
+    check(raises(ValueError, plot_tiling, [[1, 2], [3]]))
 
 
 def test_plotly():

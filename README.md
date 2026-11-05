@@ -2,8 +2,9 @@
 
 Diskrete Mathematik mit nachvollziehbarem Rechenweg, gebaut zum Modul
 DMATH-ALGO der HSLU (Diskrete Mathematik für Datenstrukturen und Algorithmen).
-Deckt die Semesterwochen 1 bis 6 ab: Elementare Datentypen, Aussagenlogik,
-Prädikatenlogik, Beweiskalkül, Analyse von Algorithmen und rekursive Algorithmen. Schwesterprojekt von
+Deckt die Semesterwochen 1 bis 8 ab: Elementare Datentypen, Aussagenlogik,
+Prädikatenlogik, Beweiskalkül, Analyse von Algorithmen, rekursive Algorithmen,
+mathematische Induktion und Zähltechniken. Schwesterprojekt von
 [lialkit](https://github.com/EnnioArnold/lialkit) (Lineare Algebra) und
 [anakit](https://github.com/EnnioArnold/Analysiskit) (Analysis).
 
@@ -78,8 +79,10 @@ rechnen/    Rechenkern: core (Formelbaum, Parser), render (Rechenweg, Tabellen)
               kalkuel        SW4  Folgerung ⊨, Ableitung ⊢, KNF, Resolution
               algorithmen    SW5  Rechenschritte zählen, Worst Case, Landau
               rekursion      SW6  Rekursionsbaum, Hanoi, Master-Satz, lineare Rekursionen
+              induktion      SW7  schwache und starke Induktion, Parkettierung, Münzen, quickSort
+              zaehlen        SW8  Summen-, Produkt-, Zuordnungsregel, sechs Zählprobleme, IPv4-Teilnetz
 grafik/     Zeichnungen (plots)
-aufgaben/   Übungsaufgaben der Serien 1–6 (exercises), Prüfstände zum Selbstprogrammieren (uebung)
+aufgaben/   Übungsaufgaben der Serien 1–8 (exercises), Prüfstände zum Selbstprogrammieren (uebung)
 docs/       Architektur-Diagramm
 tests/      ein Testskript je Modul
 ```
@@ -128,7 +131,7 @@ pip install -r requirements.txt  # einmalig
 python3 app/dmatkit_qt.py
 ```
 
-Sechs Seiten, eine je Semesterwoche. Jedes Ergebnis zeigt **Rechenweg** und
+Acht Seiten, eine je Semesterwoche. Jedes Ergebnis zeigt **Rechenweg** und
 **Zeichnung**. Die Prüfung über Wolfram|Alpha ist optional und braucht eine
 kostenlose AppID von <https://developer.wolframalpha.com/> (Umgebungsvariable
 `WOLFRAM_APPID` oder einmalige Eingabe in der App).
@@ -140,11 +143,14 @@ Dunkelmodus ein, `plotly_growth` öffnet Wachstumskurven interaktiv.
 
 ```bash
 python3 tests/tests_datentypen.py     # ebenso aussagenlogik, praedikate, kalkuel,
-python3 tests/tests_algorithmen.py    # algorithmen, rekursion, plots, exercises, uebung, app
+python3 tests/tests_algorithmen.py    # algorithmen, rekursion, induktion, zaehlen, plots, exercises, uebung, app
 ```
 
 ## Noch nicht enthalten
 
-SW6 bis SW12 (Rekursion, Induktion, Kombinatorik, Relationen, Graphentheorie)
-sind noch nicht behandelt. Der Aufbau ist darauf ausgelegt: ein neues Modul in
-`rechnen/`, seine Namen in `__init__.py`, ein Testskript.
+SW9 bis SW12 (Relationen, Graphentheorie und weitere Zähltechniken) sind noch nicht behandelt. Der Aufbau ist darauf
+ausgelegt: ein neues Modul in `rechnen/`, seine Namen in `__init__.py`, ein Testskript.
+
+Zu SW7 und SW8 enthalten die Unterlagen nur die Aufgabenstellungen. Die Lösungen sind eigene Rechnungen
+(in `exercises` als »Lösung eigen« gekennzeichnet) und gegen unabhängige Python-Rechnungen geprüft; Unklares steht als TODO
+in den Docstrings von `rechnen/induktion.py` und `rechnen/zaehlen.py`.

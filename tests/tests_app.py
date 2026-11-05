@@ -3,7 +3,7 @@
 Tests für dmatkit_qt (Fenster ohne Bildschirm): python3 tests/tests_app.py
 
 Läuft mit QT_QPA_PLATFORM=offscreen, braucht kein Netz. Legt Bilder der
-sechs Seiten (hell und dunkel, Tabellen, Syntaxbaum …) in tests/shots/ ab
+acht Seiten (hell und dunkel, Tabellen, Syntaxbaum …) in tests/shots/ ab
 (oder dort, wo DMATKIT_SHOTS hinzeigt).
 """
 import os
@@ -116,6 +116,18 @@ raises_input("rekursion", dict(action="linrec", lc="x", lF="0", li="T(0)=1"), "z
 raises_input("rekursion", dict(action="linrec", lc="5", lF="0", li=""), "")
 raises_input("rekursion", dict(action="linrec", lc="5", lF="evil(n)", li="T(0)=1"), "")
 raises_input("rekursion", dict(action="linrec", lc="1, 1", lF="0", li="T(0)=1"), "")
+raises_input("induktion", dict(action="sum", ut="2*i-1", uc="n**(", uf="1", ul="n", u0="1"), "")
+raises_input("induktion", dict(action="sum", ut="evil(i)", uc="n", uf="1", ul="n", u0="1"), "")
+raises_input("induktion", dict(action="tile", tn="3", tr="9", tc="0"), "höchstens")
+raises_input("induktion", dict(action="coins", cn="3"), "mindestens")
+raises_input("induktion", dict(action="loop", lk="residue", la="9", lm="10", lr="a, b"), "")
+raises_input("induktion", dict(action="quick", qa="x, y", qp="first"), "")
+raises_input("zaehlen", dict(action="rule", zr="assign", zs="7, 2"), "teilbar")
+raises_input("zaehlen", dict(action="rule", zr="assign", zs="7"), "zwei")
+raises_input("zaehlen", dict(action="fund", fk="comb", fn="3", fk2="5", fr="nein"), "")
+raises_input("zaehlen", dict(action="grid", gr="6", gu="4", gv="9, 9"), "")
+raises_input("zaehlen", dict(action="ip", ipc="1.2.3.4"), "")
+raises_input("zaehlen", dict(action="bits", bn="8", bk="9", bm="genau"), "höchstens")
 raises_input("rekursion", dict(action="linrec", lc="0, -1", lF="0", li="T(0)=1, T(1)=1"), "")
 
 # ---------------------------------------------------------------- Wolfram: Parser
@@ -275,7 +287,7 @@ for tex in (r"A \wedge \neg B \Rightarrow C", "A ∧ B ∨ ¬C → D ↔ E", r"W
 app, win = A.create_app([])
 win.show()
 app.processEvents()
-check(len(win.pages) == 6)
+check(len(win.pages) == 8)
 check([p.KEY for p in win.pages] == list(A.PAGE_KEYS))
 
 
@@ -335,6 +347,10 @@ shot("algorithmen", "Serie 5·1: grösstes", 1, "maxn_plot")
 shot("rekursion", "Serie 6·2", 0, "rekursion_rechenweg")
 shot("rekursion", "Serie 6·2", 1, "rekursion_baum")
 shot("rekursion", "Serie 6·8e", 0, "rekursion_linear")
+shot("induktion", "Serie 7·8", 0, "induktion_rechenweg")
+shot("induktion", "Serie 7·8", 1, "induktion_parkett")
+shot("induktion", "Serie 7·11", 1, "induktion_quicksort")
+shot("zaehlen", "Serie 8·19c", 0, "zaehlen_rechenweg")
 pg = shot("algorithmen", "Worst Case insertionSort", 0, "worstcase")
 check("Schritt" in pg.vm.title or pg.vm.title)
 
