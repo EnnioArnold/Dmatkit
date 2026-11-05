@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Selbst programmieren: Gerüste und Prüfstände für die Algorithmen der Serien 1 bis 7.
+Selbst programmieren: Gerüste und Prüfstände für die Algorithmen der Serien 1 bis 8.
 
 Wie bei lialkit steht hier keine Lösung. Du schreibst die Funktion selbst, rufst `pruefe_...` damit auf
 und siehst sofort, ob sie an den Beispielen der Serien und an den Randfällen besteht, die gern
@@ -42,7 +42,7 @@ __all__ = [
     "pruefe_dec_to_bin", "pruefe_binaer_zu_dezimal", "pruefe_forall", "pruefe_exists", "pruefe_hat_duplikate",
     "pruefe_palindrom", "pruefe_wahrheitstabelle", "pruefe_folgerung", "pruefe_resolvente",
     "pruefe_lineare_suche", "pruefe_selection_sort", "pruefe_merge_sort", "pruefe_hanoi",
-    "pruefe_muenzen", "pruefe_ueberdeckung", "pruefe_quick_sort",
+    "pruefe_muenzen", "pruefe_ueberdeckung", "pruefe_quick_sort", "pruefe_ungerade_zahlen",
     "pruefe_klassifikation", "pruefe_potenzmenge", "pruefe_dezimal_zu_bruch", "pruefe_binaer_nachkomma",
 ]
 
@@ -205,6 +205,14 @@ def mein_quick_sort(a):
     # TODO: L und R rekursiv sortieren
     # TODO: sortiertes L + [Pivot] + sortiertes R zurückgeben
     pass
+''',
+    "meine_ungerade_zahlen": '''
+def meine_ungerade_zahlen(ziffern):
+    """Serie 8, Aufgabe 15: alle ungeraden Zahlen (ohne führende 0), die genau aus den Ziffern der Liste bestehen.
+    Gibt eine aufsteigend sortierte Liste von ganzen Zahlen ohne Doppelte zurück, z. B. [1, 3] -> [31]."""
+    # TODO: alle Anordnungen der Ziffern (itertools.permutations), doppelte Anordnungen nur einmal
+    # TODO: führende 0 und gerade letzte Ziffer aussortieren
+    return []
 ''',
     "meine_klassifikation": '''
 def meine_klassifikation(f_func, n_vars):
@@ -1044,6 +1052,32 @@ def pruefe_quick_sort(funktion: Callable, ausfuehrlich: bool = True, ausgabe: bo
         _lauf(p, funktion, name, (a,), a, pruefer, h)
     p.hinweise += _quelle_hinweis(funktion, {"sorted(": "sorted() ist die fertige Lösung.", ".sort(": "list.sort() ist die fertige Lösung."})
     p.infos.append("Erwartet: eine neue Liste; die übergebene Liste darf nicht verändert werden. Das Pivot darf beliebig gewählt werden (zufällig, erstes, mittleres).")
+    return _abschluss(p, ausgabe, ausfuehrlich)
+
+
+# ==========================================================================
+# SW8: Zähltechniken
+# ==========================================================================
+def pruefe_ungerade_zahlen(funktion: Callable, ausfuehrlich: bool = True, ausgabe: bool | None = None) -> Pruefung:
+    """Prüft `meine_ungerade_zahlen(ziffern)`: sortierte Liste aller ungeraden Zahlen ohne führende 0 aus genau diesen Ziffern (Serie 8, Aufgabe 15)."""
+    p = Pruefung("Ungerade Zahlen aus Ziffern")
+
+    def pruefer(ist, soll):
+        if not isinstance(ist, list):
+            return f"Falscher Rückgabetyp: erwartet list, erhalten {_tn(ist)}."
+        if not all(isinstance(x, int) and not isinstance(x, bool) for x in ist):
+            return "Die Liste soll ganze Zahlen enthalten (keine Texte)."
+        if len(ist) != len(set(ist)):
+            return "Doppelte Zahlen: gleiche Ziffern vertauscht ergeben dieselbe Zahl, jede Zahl nur einmal."
+        if ist != soll:
+            return f"Falsch: {len(ist)} Zahlen statt {len(soll)} (sortiert aufsteigend, keine führende 0, letzte Ziffer ungerade)."
+        return None
+    for name, z, h in [("Serie 8, Aufgabe 15", [1, 2, 3, 3, 0, 0, 0], "90 Zahlen"), ("eine Ziffer", [7], ""), ("keine ungerade Ziffer", [2, 4], "leere Liste"),
+                       ("führende 0", [0, 1], "nur 10 ist keine Lösung, 01 zählt nicht: leere Liste"), ("alle gleich", [5, 5, 5], "nur 555"),
+                       ("drei Ziffern", [1, 2, 3], ""), ("mit Nullen", [1, 0, 0], "nur 001, 010 sind keine Lösung: 100 ist gerade")]:
+        soll = sorted({int("".join(map(str, q))) for q in itertools.permutations(z) if q[0] != 0 and q[-1] % 2 == 1})
+        _lauf(p, funktion, name, (z,), soll, pruefer, h)
+    p.infos.append("Ansatz: Anzahl nach der Zählregel bestimmen (Permutationen mit Wiederholungen) und die Liste damit prüfen.")
     return _abschluss(p, ausgabe, ausfuehrlich)
 
 

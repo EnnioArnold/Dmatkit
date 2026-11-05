@@ -513,7 +513,7 @@ def f_nk_ohne_periode(z, n):            # Fehler: bricht nach 8 Stellen ab
 # ==========================================================================
 ok(len(u.VORLAGEN) >= 13 and set(u.namen()) == set(u.VORLAGEN))
 for nm in ("meine_dec_to_bin", "meine_binaer_zu_dezimal", "mein_forall", "mein_exists", "meine_hat_duplikate", "mein_palindrom",
-           "meine_wahrheitstabelle", "meine_folgerung", "meine_resolvente", "meine_lineare_suche", "mein_selection_sort", "mein_merge_sort", "meine_hanoi", "meine_muenzen", "meine_ueberdeckung", "mein_quick_sort"):
+           "meine_wahrheitstabelle", "meine_folgerung", "meine_resolvente", "meine_lineare_suche", "mein_selection_sort", "mein_merge_sort", "meine_hanoi", "meine_muenzen", "meine_ueberdeckung", "mein_quick_sort", "meine_ungerade_zahlen"):
     ok(nm in u.VORLAGEN, nm)
     src = u.vorlage(nm)
     ok(src.startswith("def " + nm), nm)
@@ -537,6 +537,7 @@ for nm, pr in [("meine_dec_to_bin", u.pruefe_dec_to_bin), ("meine_binaer_zu_dezi
                ("meine_lineare_suche", u.pruefe_lineare_suche), ("mein_selection_sort", u.pruefe_selection_sort),
                ("mein_merge_sort", u.pruefe_merge_sort), ("meine_hanoi", u.pruefe_hanoi),
                ("meine_muenzen", u.pruefe_muenzen), ("meine_ueberdeckung", u.pruefe_ueberdeckung), ("mein_quick_sort", u.pruefe_quick_sort),
+               ("meine_ungerade_zahlen", u.pruefe_ungerade_zahlen),
                ("meine_klassifikation", u.pruefe_klassifikation), ("meine_potenzmenge", u.pruefe_potenzmenge),
                ("meine_dezimal_zu_bruch", u.pruefe_dezimal_zu_bruch), ("meine_binaer_nachkomma", u.pruefe_binaer_nachkomma)]:
     ns = {}
@@ -825,6 +826,28 @@ schlecht(u.pruefe_quick_sort, lambda a: sorted(a, reverse=True), "absteigend")
 schlecht(u.pruefe_quick_sort, lambda a: a[:1], "Elemente gehen verloren")
 p = u.pruefe_quick_sort(r_qs, ausgabe=False)
 ok(p.gesamt == 10 and p.ok)
+
+# SW8: Zähltechniken
+def r_uz(z):
+    return sorted({int("".join(map(str, q))) for q in itertools.permutations(z) if q[0] != 0 and q[-1] % 2 == 1})
+
+
+def f_uz_doppelt(z):                    # Fehler: Doppelte bleiben stehen
+    return sorted(int("".join(map(str, q))) for q in itertools.permutations(z) if q[0] != 0 and q[-1] % 2 == 1)
+
+
+def f_uz_fuehrende_null(z):             # Fehler: führende 0 nicht ausgeschlossen
+    return sorted({int("".join(map(str, q))) for q in itertools.permutations(z) if q[-1] % 2 == 1})
+
+
+gut(u.pruefe_ungerade_zahlen, r_uz, "ungerade Zahlen")
+ok(len(r_uz([1, 2, 3, 3, 0, 0, 0])) == 90)
+schlecht(u.pruefe_ungerade_zahlen, f_uz_doppelt, "Doppelte")
+schlecht(u.pruefe_ungerade_zahlen, f_uz_fuehrende_null, "führende 0")
+schlecht(u.pruefe_ungerade_zahlen, lambda z: [], "leer")
+schlecht(u.pruefe_ungerade_zahlen, lambda z: None, "kein return")
+schlecht(u.pruefe_ungerade_zahlen, lambda z: [str(x) for x in r_uz(z)], "Texte")
+schlecht(u.pruefe_ungerade_zahlen, lambda z: r_uz(z)[::-1], "absteigend")
 
 # Extras
 gut(u.pruefe_potenzmenge, r_pot, "Potenzmenge")
