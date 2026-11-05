@@ -2,9 +2,9 @@
 """
 dmatkit — Diskrete Mathematik mit Rechenweg, als Desktop-App im Swiss Style (Qt).
 
-Gebaut zum Modul DMATH-ALGO der HSLU (Semesterwochen 1 bis 6). Die App rechnet
+Gebaut zum Modul DMATH-ALGO der HSLU (Semesterwochen 1 bis 8). Die App rechnet
 mit demselben Paket `dmatkit` wie das Notebook; sie ist nur eine andere
-Oberfläche dafür. Sechs Seiten:
+Oberfläche dafür. Acht Seiten:
 
     Datentypen (SW1)        Boolesche Ausdrücke, Zahlsysteme, IEEE 754, Zweierkomplement, Mengen
     Aussagenlogik (SW2)     Wahrheitstabelle, Äquivalenz, Vereinfachen, Normalformen, Syntaxbaum
@@ -12,6 +12,8 @@ Oberfläche dafür. Sechs Seiten:
     Beweiskalkül (SW4)      Folgerung ⊨, Resolution, KNF-Umformung, Ableitung
     Algorithmen (SW5)       Schritte zählen, Worst Case, Wachstum, grösstes n, Landau-Symbole
     Rekursion (SW6)         Rekursionsbaum, Hanoi, Master-Satz T(n) = a·T(n/b) + c·nᵏ, lineare Rekursionen
+    Induktion (SW7)         Summenformeln, while-Schleifen, Parkettierung, Münzen, quickSort
+    Zählen (SW8)            Summen-, Produkt-, Zuordnungsregel, die sechs Zählprobleme, Gitterwege, IPv4-Teilnetz
 
 Jede Seite zeigt ihr Ergebnis als Karte mit zwei Ansichten: Rechenweg (gesetzte
 Formeln und Tabellen) und Zeichnung. Die Prüfung mit Wolfram|Alpha ist optional
@@ -357,7 +359,7 @@ def friendly_error(exc: BaseException) -> str:
 
 
 # ==========================================================================
-# Die sechs Seiten als Daten: Felder, Rechnungen, Beispiele
+# Die acht Seiten als Daten: Felder, Rechnungen, Beispiele
 # ==========================================================================
 #
 # Jede Seite hat eine Liste von Rechnungen (»Actions«). Jede Rechnung nennt
@@ -553,6 +555,45 @@ REKURSION = [
 ]
 
 
+INDUKTION = [
+    Action("sum", "Summenformel", "Σ term(i) = Formel(n) mit schwacher Induktion beweisen: Verankerung, Schritt, Probe",
+           [F("ut", "Summand in i", default="2*i - 1", ph="s + i*d   oder   i**2"),
+            F("uc", "Formel des Algorithmus in n", default="n**2", ph="n*(n+1)/2"),
+            F("uf", "i von", default="1", w=110), F("ul", "i bis", default="n", w=110, ph="n   oder   n-1"),
+            F("u0", "Start n₀", default="1", w=110)]),
+    Action("loop", "while-Schleife terminiert nie", "aⁿ mod m liegt immer in einer Menge, oder m teilt aⁿ − bⁿ (Serie 7, Aufgaben 5 bis 7)",
+           [F("lk", "Art", "choice", "residue", options=(("residue", "aⁿ mod m ∈ Menge"), ("divisible", "m teilt aⁿ − bⁿ"))),
+            F("la", "a", default="9", w=100), F("lb", "b (nur Teilbarkeit)", default="3", w=140), F("lm", "m", default="10", w=100),
+            F("lr", "Erlaubte Reste", default="1, 9", ph="1, 9")]),
+    Action("tile", "Parkettierung", "2ⁿ × 2ⁿ-Brett mit Winkel-Fliesen, ein Feld bleibt frei (Aufgabe 8)",
+           [F("tn", "n (Brett 2ⁿ × 2ⁿ)", default="3", w=140), F("tr", "Loch: Zeile", default="5", w=110), F("tc", "Loch: Spalte", default="2", w=110)]),
+    Action("coins", "Münzen", "n Franken als 2a + 5b, starke Induktion (Aufgabe 10)", [F("cn", "n (ab 4)", default="11")]),
+    Action("quick", "quickSort", "Aufrufe mit Pivot, L und R; Korrektheit mit starker Induktion (Aufgabe 11)",
+           [F("qa", "Liste", default="4, 6, 5, 1, 7, 4, 3, 1", ph="4, 6, 5, 1"),
+            F("qp", "Pivot", "choice", "first", options=(("first", "erstes"), ("middle", "mittleres"), ("last", "letztes"), ("random", "zufällig")))]),
+]
+
+ZAEHLEN = [
+    Action("rule", "Zählregel", "Summen-, Produkt-, Zuordnungs- oder Gegenteilregel",
+           [F("zr", "Regel", "choice", "product", options=(("sum", "Summenregel"), ("product", "Produktregel"), ("assign", "Zuordnungsregel"), ("compl", "Gegenteil zählen"))),
+            F("zs", "Grössen", default="62, 62, 62", ph="Summe/Produkt: 3, 2   Zuordnung: |A|, k   Gegenteil: alle, unerwünscht")]),
+    Action("fund", "Sechs Zählprobleme", "Permutation, Variation, Kombination, mit und ohne Wiederholungen",
+           [F("fk", "Problem", "choice", "comb", options=(("perm", "Permutation (n!)"), ("permrep", "Permutation mit Wiederholungen"), ("var", "Variation"), ("comb", "Kombination"))),
+            F("fn", "n", default="5", w=100), F("fk2", "k", default="3", w=100),
+            F("fr", "mit Wiederholungen?", "choice", "nein", options=(("nein", "ohne"), ("ja", "mit")), w=170),
+            F("fs", "Wiederholungen s₁, s₂, …", default="3, 1, 1", ph="nur Permutation mit Wiederholungen")]),
+    Action("bits", "Bitwörter", "Länge n mit genau oder höchstens k Einsen (Aufgaben 1 bis 3, 13)",
+           [F("bn", "n", default="8", w=100), F("bk", "k (leer = alle)", default="2", w=140),
+            F("bm", "Einsen", "choice", "genau", options=(("genau", "genau k"), ("hoechstens", "höchstens k")), w=170)]),
+    Action("surj", "Verteilung ohne leeres Fach", "n verschiedene Objekte auf m Fächer, jedes belegt (Aufgabe 19 c)",
+           [F("sn", "n Objekte", default="9", w=120), F("sm", "m Fächer", default="3", w=120)]),
+    Action("grid", "Gitterwege", "Kürzeste Wege im Gitter, optional über einen Punkt (Aufgabe 20)",
+           [F("gr", "nach rechts", default="6", w=110), F("gu", "nach oben", default="4", w=110),
+            F("gv", "über Punkt (r, u)", default="2, 2", ph="leer = ohne", w=150)]),
+    Action("ip", "IPv4-Teilnetz", "Netzname, Broadcast und Hosts (Aufgabe 22)", [F("ipc", "Adresse/Präfix", default="191.0.13.143/26")]),
+]
+
+
 @dataclass
 class PageSpec:
     key: str
@@ -693,6 +734,32 @@ EX_REKURSION = [
     _ex("Hanoi: T(n) = 2·T(n−1) + 1", "linrec", lc="2", lF="1", li="T(1)=1"),
 ]
 
+EX_INDUKTION = [
+    _ex("Serie 7·1: s + (s+d) + … mit summe(s, n, d)", "sum", ut="s + i*d", uc="n*s + n*(n-1)/2*d", uf="0", ul="n-1", u0="1"),
+    _ex("Serie 7·2: geometrische Summe", "sum", ut="s*q**i", uc="s*(q**n - 1)/(q - 1)", uf="0", ul="n-1", u0="1"),
+    _ex("Serie 7·3: Summe der Quadratzahlen", "sum", ut="i**2", uc="n*(n+1)*(2*n+1)/6", uf="1", ul="n", u0="1"),
+    _ex("Serie 7·4: Summe der ungeraden Zahlen", "sum", ut="2*i - 1", uc="n**2", uf="1", ul="n", u0="1"),
+    _ex("Serie 7·5: 5 teilt 8ⁿ − 3ⁿ", "loop", lk="divisible", la="8", lb="3", lm="5", lr="1"),
+    _ex("Serie 7·6: 9ⁿ mod 10 ∈ {1, 9}", "loop", lk="residue", la="9", lb="3", lm="10", lr="1, 9"),
+    _ex("Serie 7·7: 2ⁿ mod 7 ∈ {1, 2, 4}", "loop", lk="residue", la="2", lb="3", lm="7", lr="1, 2, 4"),
+    _ex("Serie 7·8: Parkettierung 8 × 8", "tile", tn="3", tr="5", tc="2"),
+    _ex("Serie 7·10: 11 Franken", "coins", cn="11"),
+    _ex("Serie 7·11: quickSort [4, 6, 5, 1, 7, 4, 3, 1]", "quick", qa="4, 6, 5, 1, 7, 4, 3, 1", qp="first"),
+]
+
+EX_ZAEHLEN = [
+    _ex("Serie 8·1: 8-Bit-Worte mit genau 2 Einsen", "bits", bn="8", bk="2", bm="genau"),
+    _ex("Serie 8·4: URLs der Länge 7", "rule", zr="product", zs="62, 62, 62, 62, 62, 62, 62"),
+    _ex("Serie 8·7: Handshakes (1000·999 / 2)", "rule", zr="assign", zs="999000, 2"),
+    _ex("Serie 8·10: 42 Threads auf 4 Prozessoren", "fund", fk="comb", fn="4", fk2="42", fr="ja"),
+    _ex("Serie 8·12a: Warteschlangen", "fund", fk="permrep", fn="29", fk2="0", fr="nein", fs="5, 9, 5, 3, 7"),
+    _ex("Serie 8·13: 32 Bit mit höchstens 8 Einsen", "bits", bn="32", bk="8", bm="hoechstens"),
+    _ex("Serie 8·16: 6 Worte auf 9 Register", "fund", fk="var", fn="9", fk2="6", fr="nein"),
+    _ex("Serie 8·19c: 9 Programme auf 3 Rechner", "surj", sn="9", sm="3"),
+    _ex("Serie 8·20b: Wege über C", "grid", gr="6", gu="4", gv="2, 2"),
+    _ex("Serie 8·22: 191.0.13.143/26", "ip", ipc="191.0.13.143/26"),
+]
+
 PAGES: dict[str, PageSpec] = {
     "datentypen": PageSpec("datentypen", "Datentypen", "Datentypen (SW1)",
                            "Boolesche Ausdrücke, Zahlsysteme, Brüche, IEEE 754, Zweierkomplement und Mengen.",
@@ -712,6 +779,12 @@ PAGES: dict[str, PageSpec] = {
     "rekursion": PageSpec("rekursion", "Rekursion", "Rekursion (SW6)",
                           "Rekursionsbäume, Türme von Hanoi, Master-Satz für divide and conquer und lineare Rekursionsbeziehungen.",
                           REKURSION, EX_REKURSION),
+    "induktion": PageSpec("induktion", "Induktion", "Induktion (SW7)",
+                          "Summenformeln und while-Schleifen mit schwacher Induktion, Parkettierung, Münzen und quickSort mit starker Induktion.",
+                          INDUKTION, EX_INDUKTION),
+    "zaehlen": PageSpec("zaehlen", "Zählen", "Zähltechniken (SW8)",
+                        "Summen-, Produkt- und Zuordnungsregel, die sechs fundamentalen Zählprobleme, Gitterwege und IPv4-Teilnetze.",
+                        ZAEHLEN, EX_ZAEHLEN),
 }
 PAGE_KEYS = tuple(PAGES)
 
@@ -924,8 +997,79 @@ def calc_rekursion(p: dict):
     raise InputError("Unbekannte Rechnung.")
 
 
+def _ints(text: str, what: str, lo: int, hi: int) -> list[int]:
+    vals = read_list(text, what)
+    if not vals or not all(isinstance(v, int) and not isinstance(v, bool) for v in vals):
+        raise InputError(f"Bitte {what} als ganze Zahlen angeben, etwa 3, 2.")
+    if not all(lo <= v <= hi for v in vals):
+        raise InputError(f"{what[0].upper() + what[1:]}: Werte zwischen {lo} und {hi}.")
+    return vals
+
+
+def calc_induktion(p: dict):
+    a = p.get("action", "sum")
+    if a == "sum":
+        return dk.prove_sum(get_text(p, "ut", "den Summanden"), get_text(p, "uc", "die Formel"), first=get_text(p, "uf", "die untere Grenze"),
+                            last=get_text(p, "ul", "die obere Grenze"), n0=get_int(p, "u0", "n₀", 0, 100))
+    if a == "loop":
+        m = get_int(p, "lm", "m", 2, 10 ** 6)
+        base = get_int(p, "la", "a", 2, 10 ** 6)
+        if p.get("lk") == "divisible":
+            return dk.prove_divisible(base, get_int(p, "lb", "b", 1, 10 ** 6), m)
+        return dk.prove_residue(base, m, _ints(p.get("lr", ""), "die erlaubten Reste", 0, m - 1))
+    if a == "tile":
+        n = get_int(p, "tn", "n", 1, 5)
+        return dk.tile_board(n, (get_int(p, "tr", "die Zeile", 0, 2 ** n - 1), get_int(p, "tc", "die Spalte", 0, 2 ** n - 1)))
+    if a == "coins":
+        return dk.coins(get_int(p, "cn", "n", 4, 10 ** 6))
+    if a == "quick":
+        return dk.quick_sort(_ints(p.get("qa", ""), "die Liste", -10 ** 9, 10 ** 9), pivot=p.get("qp", "first"))
+    raise InputError("Unbekannte Rechnung.")
+
+
+def calc_zaehlen(p: dict):
+    a = p.get("action", "rule")
+    if a == "rule":
+        v = _ints(p.get("zs", ""), "die Grössen", 0, 10 ** 12)
+        k = p.get("zr", "product")
+        if k == "sum":
+            return dk.sum_rule(*v)
+        if k == "product":
+            return dk.product_rule(*v)
+        if len(v) != 2:
+            raise InputError("Hier genau zwei Zahlen angeben, etwa 999000, 2.")
+        return dk.assignment_rule(*v) if k == "assign" else dk.complement_rule(*v)
+    if a == "fund":
+        k, rep = p.get("fk", "comb"), p.get("fr") == "ja"
+        if k == "permrep":
+            return dk.count_permutations(repeats=_ints(p.get("fs", ""), "die Wiederholungen", 1, 5000))
+        n = get_int(p, "fn", "n", 0, 5000)
+        if k == "perm":
+            return dk.count_permutations(n)
+        kk = get_int(p, "fk2", "k", 0, 5000)
+        return dk.count_variations(n, kk, rep) if k == "var" else dk.count_combinations(n, kk, rep)
+    if a == "bits":
+        n = get_int(p, "bn", "n", 0, 5000)
+        if not (p.get("bk") or "").strip():
+            return dk.count_bitwords(n)
+        k = get_int(p, "bk", "k", 0, n)
+        return dk.count_bitwords(n, at_most=k) if p.get("bm") == "hoechstens" else dk.count_bitwords(n, ones=k)
+    if a == "surj":
+        return dk.count_surjections(get_int(p, "sn", "n", 0, 400), get_int(p, "sm", "m", 1, 200))
+    if a == "grid":
+        r, u = get_int(p, "gr", "rechts", 0, 5000), get_int(p, "gu", "oben", 0, 5000)
+        via = _ints(p["gv"], "den Punkt", 0, 5000) if (p.get("gv") or "").strip() else None
+        if via is not None and len(via) != 2:
+            raise InputError("Der Punkt besteht aus zwei Zahlen, etwa 2, 2.")
+        return dk.lattice_paths(r, u, tuple(via) if via else None)
+    if a == "ip":
+        return dk.ip_network(get_text(p, "ipc", "die Adresse mit Präfix"))
+    raise InputError("Unbekannte Rechnung.")
+
+
 CALC = {"datentypen": calc_datentypen, "logik": calc_logik, "praedikate": calc_praedikate,
-        "kalkuel": calc_kalkuel, "algorithmen": calc_algorithmen, "rekursion": calc_rekursion}
+        "kalkuel": calc_kalkuel, "algorithmen": calc_algorithmen, "rekursion": calc_rekursion,
+        "induktion": calc_induktion, "zaehlen": calc_zaehlen}
 
 
 def calc(page: str, p: dict):
@@ -953,6 +1097,8 @@ def figure_names(page: str, p: dict) -> list[str]:
     if page == "algorithmen" and act == "growth":
         return ["Logarithmisch", "Linear"]
     if page == "rekursion" and act == "tree":
+        return ["Aufrufe", "Mit Rückgabe"]
+    if page == "induktion" and act == "quick":
         return ["Aufrufe", "Mit Rückgabe"]
     return ["Zeichnung"]
 
@@ -1082,6 +1228,11 @@ def make_figure(page: str, p: dict, result, dark: bool = False, variant: int = 0
             vals = [result.at(n) for n in ns]
             vals = [int(v) if v == int(v) else float(v) for v in vals]
             return dk.plot_steps(ns, vals, dark=dark, title="T(n) für die ersten Werte")
+    if page == "induktion":
+        if a == "tile":
+            return result.figure(dark=dark)
+        if a == "quick":
+            return result.figure(values=(variant == 1), dark=dark)
     raise NotImplementedError(NO_FIGURE)
 
 
@@ -1581,6 +1732,8 @@ def wolfram_subtitle(page: str) -> str:
         "praedikate": "Für Quantoren gibt es keine Prüfung bei Wolfram|Alpha.",
         "kalkuel": "Prüft über die Wahrheitstabelle, ob die Folgerung beziehungsweise Umformung gilt.",
         "algorithmen": "Prüft das grösste n: f(n) ≤ Budget < f(n + 1) bei Wolfram|Alpha.",
+        "induktion": "Für Induktion gibt es keine Prüfung bei Wolfram|Alpha. Die Probe mit konkreten Werten steht im Rechenweg.",
+        "zaehlen": "Für Zähltechniken gibt es keine Prüfung bei Wolfram|Alpha. Wo es klein genug ist, zählt der Rechenweg alle Möglichkeiten zur Probe auf.",
         "rekursion": "Für Rekursion gibt es keine Prüfung bei Wolfram|Alpha. Die Rechnung prüft sich selbst (Probe im Rechenweg).",
     }[page]
 
@@ -3701,7 +3854,7 @@ class AnimationPane(QWidget):
 
 class ToolPage(QWidget):
     """
-    Gemeinsames Gerüst der sechs Seiten.
+    Gemeinsames Gerüst der acht Seiten.
 
     Links die Aufgabe (Rechnung wählen, Felder ausfüllen) und die Prüfung mit
     Wolfram|Alpha, rechts die Ergebniskarte. Was eine Seite kann, steht als Daten
@@ -4496,7 +4649,7 @@ class MainWindow(QMainWindow):
     def keyPressEvent(self, event):
         mods = event.modifiers()
         if mods & (Qt.ControlModifier | Qt.MetaModifier):
-            if Qt.Key_1 <= event.key() <= Qt.Key_6:
+            if Qt.Key_1 <= event.key() <= Qt.Key_8:
                 self.set_page(event.key() - Qt.Key_1)
                 return
             if event.key() in (Qt.Key_Return, Qt.Key_Enter):
