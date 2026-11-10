@@ -4802,7 +4802,7 @@ class MainWindow(QMainWindow):
         changed = index != self.stack.currentIndex()
         self.stack.setCurrentIndex(index)
         self.seg_page.set_value(index)
-        if changed and QApplication.platformName() != "offscreen":
+        if changed and (QApplication.platformName() != "offscreen" or os.environ.get("DMATKIT_FADE")):
             self._fade_in(self.pages[index])
 
     def _fade_in(self, page: QWidget):
