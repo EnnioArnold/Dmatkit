@@ -261,9 +261,9 @@ def _build_scenes():
                      (2.6, 3.4, 2.2, ds.MINT)]
             rings = []
             for x, y, r, color in spots:
-                for k in range(16):
-                    rings.append(Circle(radius=r * (1 - k / 16), stroke_width=0, fill_color=color,
-                                        fill_opacity=(0.006 if dark else 0.026)).move_to([x, y, 0]))
+                for k in range(32):
+                    rings.append(Circle(radius=r * (1 - k / 32), stroke_width=0, fill_color=color,
+                                        fill_opacity=(0.003 if dark else 0.013)).move_to([x, y, 0]))
             return VGroup(*rings)
 
         def pause(self, seconds):
