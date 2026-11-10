@@ -2,9 +2,9 @@
 """
 dmatkit — Diskrete Mathematik mit Rechenweg, als Desktop-App im Swiss Style (Qt).
 
-Gebaut zum Modul DMATH-ALGO der HSLU (Semesterwochen 1 bis 8). Die App rechnet
+Gebaut zum Modul DMATH-ALGO der HSLU (Semesterwochen 1 bis 9). Die App rechnet
 mit demselben Paket `dmatkit` wie das Notebook; sie ist nur eine andere
-Oberfläche dafür. Acht Seiten:
+Oberfläche dafür. Neun Seiten:
 
     Datentypen (SW1)        Boolesche Ausdrücke, Zahlsysteme, IEEE 754, Zweierkomplement, Mengen
     Aussagenlogik (SW2)     Wahrheitstabelle, Äquivalenz, Vereinfachen, Normalformen, Syntaxbaum
@@ -14,6 +14,7 @@ Oberfläche dafür. Acht Seiten:
     Rekursion (SW6)         Rekursionsbaum, Hanoi, Master-Satz T(n) = a·T(n/b) + c·nᵏ, lineare Rekursionen
     Induktion (SW7)         Summenformeln, while-Schleifen, Parkettierung, Münzen, quickSort
     Zählen (SW8)            Summen-, Produkt-, Zuordnungsregel, die sechs Zählprobleme, Gitterwege, IPv4-Teilnetz
+    Zählen II (SW9)         Inklusion und Exklusion, Rekursion beim Zählen, erzeugende Funktionen
 
 Jede Seite zeigt ihr Ergebnis als Karte mit zwei Ansichten: Rechenweg (gesetzte
 Formeln und Tabellen) und Zeichnung. Die Prüfung mit Wolfram|Alpha ist optional
@@ -359,7 +360,7 @@ def friendly_error(exc: BaseException) -> str:
 
 
 # ==========================================================================
-# Die acht Seiten als Daten: Felder, Rechnungen, Beispiele
+# Die neun Seiten als Daten: Felder, Rechnungen, Beispiele
 # ==========================================================================
 #
 # Jede Seite hat eine Liste von Rechnungen (»Actions«). Jede Rechnung nennt
@@ -593,6 +594,27 @@ ZAEHLEN = [
     Action("ip", "IPv4-Teilnetz", "Netzname, Broadcast und Hosts (Aufgabe 22)", [F("ipc", "Adresse/Präfix", default="191.0.13.143/26")]),
 ]
 
+ZAEHLKOMPLEX = [
+    Action("ie", "Inklusion/Exklusion", "Vereinigung mehrerer Mengen: Summe + Inklusion − Exklusion (Aufgabe 1)",
+           [F("im", "Mengen, mit ; getrennt", default="1, 4, 5, 7; 2, 4, 6, 7; 3, 5, 6, 7", ph="Elemente mit Komma, Mengen mit Strichpunkt")]),
+    Action("div", "Teilbare Zahlen", "Zahlen von 1 bis n, teilbar durch einen der Teiler (Aufgaben 2 bis 4)",
+           [F("dl", "bis n", default="100000", w=140), F("dd", "Teiler", default="2, 3, 5, 7", ph="2, 3, 5, 7")]),
+    Action("sieve", "Siebformel", "Vertauschungen mit festem Platz (Aufgabe 5) oder Aufträge mit freiem Drucker (Aufgabe 6)",
+           [F("sk", "Problem", "choice", "fixed", options=(("fixed", "Vertauschung mit festem Platz"), ("unused", "Verteilung mit freiem Fach")), w=250),
+            F("sn", "n (Buchstaben/Aufträge)", default="8", w=170), F("sm", "m (Fächer, nur Verteilung)", default="5", w=190)]),
+    Action("rec", "Zählen mit Rekursion", "s(n) über eine Rekursionsbeziehung (Aufgaben 7 bis 11)",
+           [F("rp", "Problem", "choice", "no00", options=(("no00", "keine zwei Nullen nebeneinander"), ("even_zeros", "Ziffern, gerade Anzahl Nullen"),
+                                                          ("no000", "keine drei Nullen nebeneinander"), ("contains01", "enthält das Muster 01"),
+                                                          ("stairs", "Treppe, 1 oder 2 Stufen"))),
+            F("rn", "n", default="8", w=100)]),
+    Action("gf", "Erzeugende Funktion", "Anzahl Lösungen von x₁ + … + xₙ = Summe mit Einschränkungen (Aufgaben 12, 13)",
+           [F("gm", "Erlaubte Werte je Variable", default="2, 3, 4; 3, 4; 4, 5", ph="Strichpunkt trennt Variablen, 1..6 steht für 1 bis 6"),
+            F("gt", "Summe", default="11", w=100)]),
+    Action("coins", "Münzen", "Betrag mit Münzen bezahlen oder einwerfen, mit erzeugender Funktion (Aufgabe 14)",
+           [F("cm", "Münzen", default="1, 2, 5", w=160), F("ct", "Betrag", default="15", w=100),
+            F("co", "Zählweise", "choice", "nein", options=(("nein", "bezahlen (ohne Reihenfolge)"), ("ja", "der Reihe nach einwerfen")), w=240)]),
+]
+
 
 @dataclass
 class PageSpec:
@@ -759,6 +781,24 @@ EX_ZAEHLEN = [
     _ex("Serie 8·20b: Wege über C", "grid", gr="6", gu="4", gv="2, 2"),
     _ex("Serie 8·22: 191.0.13.143/26", "ip", ipc="191.0.13.143/26"),
 ]
+EX_ZAEHLKOMPLEX = [
+    _ex("Serie 9·1: vier Mengen, {1, …, 15}", "ie", im="1, 5, 6, 7, 11, 12, 13, 15; 2, 5, 8, 9, 11, 12, 14, 15; 3, 6, 8, 10, 11, 13, 14, 15; 4, 7, 9, 10, 12, 13, 14, 15"),
+    _ex("Seite 2: drei Mengen, {1, …, 7}", "ie", im="1, 4, 5, 7; 2, 4, 6, 7; 3, 5, 6, 7"),
+    _ex("Serie 9·2: teilbar durch 2, 3, 5 (bis 1000)", "div", dl="1000", dd="2, 3, 5"),
+    _ex("Serie 9·3: teilbar durch 6, 7, 8 (bis 10000)", "div", dl="10000", dd="6, 7, 8"),
+    _ex("Serie 9·4: teilbar durch 2, 3, 5, 7 (bis 100000)", "div", dl="100000", dd="2, 3, 5, 7"),
+    _ex("Serie 9·5: COMPUTER, fester Platz", "sieve", sk="fixed", sn="8", sm="5"),
+    _ex("Serie 9·6: 7 Aufträge, 5 Drucker", "sieve", sk="unused", sn="7", sm="5"),
+    _ex("Serie 9·7: keine zwei Nullen (n = 8)", "rec", rp="no00", rn="8"),
+    _ex("Serie 9·9: keine drei Nullen (n = 8)", "rec", rp="no000", rn="8"),
+    _ex("Serie 9·10: Muster 01 (n = 8)", "rec", rp="contains01", rn="8"),
+    _ex("Serie 9·11: Treppe mit 10 Stufen", "rec", rp="stairs", rn="10"),
+    _ex("Serie 9·12: vier Würfel, Summe 13", "gf", gm="1..6; 1..6; 1..6; 1..6", gt="13"),
+    _ex("Serie 9·13: 8 Jobs auf 3 Server", "gf", gm="2..4; 2..4; 2..4", gt="8"),
+    _ex("Seite 12: x₁ + x₂ + x₃ = 11", "gf", gm="2, 3, 4; 3, 4; 4, 5", gt="11"),
+    _ex("Serie 9·14a: 15 Franken bezahlen", "coins", cm="1, 2, 5", ct="15", co="nein"),
+    _ex("Serie 9·14b: 15 Franken einwerfen", "coins", cm="1, 2, 5", ct="15", co="ja"),
+]
 
 PAGES: dict[str, PageSpec] = {
     "datentypen": PageSpec("datentypen", "Datentypen", "Datentypen (SW1)",
@@ -785,6 +825,9 @@ PAGES: dict[str, PageSpec] = {
     "zaehlen": PageSpec("zaehlen", "Zählen", "Zähltechniken (SW8)",
                         "Summen-, Produkt- und Zuordnungsregel, die sechs fundamentalen Zählprobleme, Gitterwege und IPv4-Teilnetze.",
                         ZAEHLEN, EX_ZAEHLEN),
+    "zaehlkomplex": PageSpec("zaehlkomplex", "Zählen II", "Zählen II (SW9)",
+                             "Inklusion und Exklusion, Zählen mit Rekursion (divide and conquer) und mit erzeugenden Funktionen.",
+                             ZAEHLKOMPLEX, EX_ZAEHLKOMPLEX),
 }
 PAGE_KEYS = tuple(PAGES)
 
@@ -1027,6 +1070,50 @@ def calc_induktion(p: dict):
     raise InputError("Unbekannte Rechnung.")
 
 
+def _groups(text: str, what: str, lo: int = -10 ** 6, hi: int = 10 ** 6) -> list[list[int]]:
+    """»1, 4; 2..4« -> [[1, 4], [2, 3, 4]]: Gruppen mit Strichpunkt, Bereiche mit »..«."""
+    out = []
+    for part in (text or "").replace(MINUS, "-").split(";"):
+        vals: list[int] = []
+        for tok in part.replace(",", " ").split():
+            try:
+                if ".." in tok:
+                    a, b = (int(t) for t in tok.split(".."))
+                    if b - a > 10_000:
+                        raise ValueError
+                    vals += list(range(a, b + 1))
+                else:
+                    vals.append(int(tok))
+            except ValueError:
+                raise InputError(f"»{tok}« ist keine ganze Zahl oder kein Bereich wie 1..6 (gebraucht für {what}).") from None
+        if vals:
+            out.append(vals)
+    if not out:
+        raise InputError(f"Bitte {what} eingeben.")
+    if not all(lo <= v <= hi for g in out for v in g):
+        raise InputError(f"{what[0].upper() + what[1:]}: Werte zwischen {lo} und {hi}.")
+    return out
+
+
+def calc_zaehlkomplex(p: dict):
+    a = p.get("action", "ie")
+    if a == "ie":
+        return dk.inclusion_exclusion(_groups(p.get("im"), "die Mengen"))
+    if a == "div":
+        return dk.count_divisible(get_int(p, "dl", "n", 1, 10 ** 12), _ints(p.get("dd", ""), "die Teiler", 1, 10 ** 9))
+    if a == "sieve":
+        if p.get("sk") == "unused":
+            return dk.count_unused(get_int(p, "sn", "n", 0, 400), get_int(p, "sm", "m", 1, 200))
+        return dk.count_fixed_point(get_int(p, "sn", "n", 1, 400))
+    if a == "rec":
+        return dk.count_recursive(p.get("rp", "no00"), get_int(p, "rn", "n", 1, 2000))
+    if a == "gf":
+        return dk.gf_count(_groups(p.get("gm"), "die erlaubten Werte", 0, 5000), get_int(p, "gt", "die Summe", 0, 5000))
+    if a == "coins":
+        return dk.gf_coins(_ints(p.get("cm", ""), "die Münzen", 1, 5000), get_int(p, "ct", "den Betrag", 0, 5000), ordered=p.get("co") == "ja")
+    raise InputError("Unbekannte Rechnung.")
+
+
 def calc_zaehlen(p: dict):
     a = p.get("action", "rule")
     if a == "rule":
@@ -1069,7 +1156,7 @@ def calc_zaehlen(p: dict):
 
 CALC = {"datentypen": calc_datentypen, "logik": calc_logik, "praedikate": calc_praedikate,
         "kalkuel": calc_kalkuel, "algorithmen": calc_algorithmen, "rekursion": calc_rekursion,
-        "induktion": calc_induktion, "zaehlen": calc_zaehlen}
+        "induktion": calc_induktion, "zaehlen": calc_zaehlen, "zaehlkomplex": calc_zaehlkomplex}
 
 
 def calc(page: str, p: dict):
@@ -1233,6 +1320,13 @@ def make_figure(page: str, p: dict, result, dark: bool = False, variant: int = 0
             return result.figure(dark=dark)
         if a == "quick":
             return result.figure(values=(variant == 1), dark=dark)
+    if page == "zaehlkomplex":
+        if a == "rec":
+            ns = sorted(result.values)
+            return dk.plot_steps(ns, [result.values[k] for k in ns], dark=dark, title="s(n) für die ersten Werte")
+        if a in ("gf", "coins"):
+            ks = sorted(result.poly)
+            return dk.plot_steps(ks, [result.poly[k] for k in ks], dark=dark, title="Koeffizienten der erzeugenden Funktion")
     raise NotImplementedError(NO_FIGURE)
 
 
@@ -1734,6 +1828,7 @@ def wolfram_subtitle(page: str) -> str:
         "algorithmen": "Prüft das grösste n: f(n) ≤ Budget < f(n + 1) bei Wolfram|Alpha.",
         "induktion": "Für Induktion gibt es keine Prüfung bei Wolfram|Alpha. Die Probe mit konkreten Werten steht im Rechenweg.",
         "zaehlen": "Für Zähltechniken gibt es keine Prüfung bei Wolfram|Alpha. Wo es klein genug ist, zählt der Rechenweg alle Möglichkeiten zur Probe auf.",
+        "zaehlkomplex": "Für Zähltechniken gibt es keine Prüfung bei Wolfram|Alpha. Die Probe durch Aufzählen steht im Rechenweg.",
         "rekursion": "Für Rekursion gibt es keine Prüfung bei Wolfram|Alpha. Die Rechnung prüft sich selbst (Probe im Rechenweg).",
     }[page]
 
@@ -3854,7 +3949,7 @@ class AnimationPane(QWidget):
 
 class ToolPage(QWidget):
     """
-    Gemeinsames Gerüst der acht Seiten.
+    Gemeinsames Gerüst der neun Seiten.
 
     Links die Aufgabe (Rechnung wählen, Felder ausfüllen) und die Prüfung mit
     Wolfram|Alpha, rechts die Ergebniskarte. Was eine Seite kann, steht als Daten
@@ -4546,7 +4641,7 @@ class MainWindow(QMainWindow):
         self.brand = label("dmatkit", 13, weight=QFont.DemiBold)
         nav_lay.addWidget(self.brand)
         nav_lay.addSpacing(18)
-        self.seg_page = Segmented([PAGES[k].tab for k in PAGE_KEYS], 0, pad=24)
+        self.seg_page = Segmented([re.sub(r" \(SW\d+\)$", "", PAGES[k].tab) for k in PAGE_KEYS], 0, pad=18)   # neun Reiter müssen in die Kopfzeile passen
         self.seg_page.changed.connect(self.set_page)
         nav_lay.addWidget(self.seg_page)
         nav_lay.addStretch(1)
