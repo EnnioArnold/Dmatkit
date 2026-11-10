@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Die Aufgaben der Übungsserien 1 bis 8 (DMATH-ALGO) — als Daten, mit Selbstkontrolle.
+Die Aufgaben der Übungsserien 1 bis 9 (DMATH-ALGO) — als Daten, mit Selbstkontrolle.
 
 Jede Aufgabe ist ein Datensatz
 
@@ -348,10 +348,10 @@ def _woche(week) -> int | None:
     else:
         m = re.fullmatch(r"\s*(?:SW|LG|S)?\s*(\d+)\s*", str(week), flags=re.I)
         if not m:
-            raise KeyError(f"Unbekannte Woche {week!r}. Gemeint ist eine Zahl von 1 bis 8 oder »SW3«.")
+            raise KeyError(f"Unbekannte Woche {week!r}. Gemeint ist eine Zahl von 1 bis 9 oder »SW3«.")
         w = int(m.group(1))
     if w not in {e.week for e in EXERCISES.values()}:
-        raise KeyError(f"Für Woche {week!r} gibt es keine Aufgaben. Vorhanden sind Wochen 1 bis 8.")
+        raise KeyError(f"Für Woche {week!r} gibt es keine Aufgaben. Vorhanden sind Wochen 1 bis 9.")
     return w
 
 
@@ -383,7 +383,7 @@ def _schluessel(id: str) -> str:
     nah = difflib.get_close_matches(low, list(_LOWER), n=4, cutoff=0.6)
     if nah:
         raise KeyError(f"Unbekannte Aufgabe {id!r}. Gemeint: {', '.join(_LOWER[n] for n in nah)}")
-    raise KeyError(f"Unbekannte Aufgabe {id!r}. `liste()` zeigt alle Schlüssel (Woche: SW1 bis SW8).")
+    raise KeyError(f"Unbekannte Aufgabe {id!r}. `liste()` zeigt alle Schlüssel (Woche: SW1 bis SW9).")
 
 
 def aufgabe(id: str) -> Exercise:
@@ -2245,6 +2245,141 @@ _ex("SW8.B6", "CIDR-Beispiel 191.0.13.143/26", "Netzname, Broadcast und Hostbere
      E("Hosts 191.0.13.129 – 191.0.13.190", lambda r: (r.first_host, r.last_host), ("191.0.13.129", "191.0.13.190"), "Serie 8, Aufgabe 22"),
      E("62 Hosts", lambda r: r.hosts, 62, "von Hand: 2⁶ − 2")],
     "Die letzten 6 Bits sind der Hostanteil.", source="Serie 8, Aufgabe 22 (Beispiel im Text)")
+
+
+# ==========================================================================
+# Serie 9 — Komplexere Zähltechniken
+# ==========================================================================
+# In den Unterlagen steht nur die Aufgabenstellung (keine Musterlösung). Die Soll-Werte sind eigene Rechnungen, unabhängig mit
+# Python (itertools, Schleifen, Rekursion ohne Formel) bestimmt.
+from ..rechnen import zaehlkomplex as zk
+
+_S1 = {1, 5, 6, 7, 11, 12, 13, 15}
+_S2 = {2, 5, 8, 9, 11, 12, 14, 15}
+_S3 = {3, 6, 8, 10, 11, 13, 14, 15}
+_S4 = {4, 7, 9, 10, 12, 13, 14, 15}
+
+
+def _ie_teile(sets):
+    """Summe, Inklusion, Exklusion unabhängig aus den Schnitten gerechnet (Seite 3 der Serie)."""
+    t = {k: sum(len(set.intersection(*c)) for c in _it.combinations(sets, k)) for k in range(1, len(sets) + 1)}
+    return t[1], sum(v for k, v in t.items() if k % 2 and k >= 3), sum(v for k, v in t.items() if k % 2 == 0)
+
+
+_ex("SW9.1", "Inklusion/Exklusion prüfen: {1, …, 15} aus vier Mengen", "Prüfen Sie die Regel |S| = Summe + Inklusion − Exklusion für die Zerlegung von {1, …, 15} in vier Mengen S₁, …, S₄.",
+    lambda: zk.inclusion_exclusion([_S1, _S2, _S3, _S4]),
+    [E("|S| = 15", lambda r: r.count, 15, "Serie 9, Aufgabe 1: die Vereinigung ist {1, …, 15}"),
+     E("Summe, Inklusion, Exklusion", lambda r: (r.summe, r.inklusion, r.exklusion), _ie_teile([_S1, _S2, _S3, _S4]), "unabhängig aus allen Schnitten gerechnet"),
+     E("Vereinigung = {1, …, 15}", lambda r: _S1 | _S2 | _S3 | _S4, set(range(1, 16)), "Serie 9, Aufgabe 1")],
+    "Summe der vier Mengen, dann Schnitte zu zweit (Exklusion), zu dritt und zu viert (Inklusion).", source="Serie 9, Aufgabe 1; Lösung eigen")
+
+
+def _zaehle_teilbar(limit, ds):
+    return sum(1 for m in range(1, limit + 1) if any(m % d == 0 for d in ds))
+
+
+_ex("SW9.2", "doSomething() bei 2, 3 oder 5 (n bis 1000)", "Wie oft wird doSomething() aufgerufen (while n <= 1000, if n%2 == 0 or n%3 == 0 or n%5 == 0)?",
+    lambda: zk.count_divisible(1000, [2, 3, 5]),
+    [E("734 Aufrufe", lambda r: r.count, 734, "Schleife über n = 1 … 1000"),
+     E("Schleife nachgezählt", lambda r: _zaehle_teilbar(1000, (2, 3, 5)), 734, "unabhängig")],
+    "Sᵢ = Vielfache von 2, 3, 5 in 1 … 1000; die Schnitte sind die Vielfachen von 6, 10, 15 und 30.", source="Serie 9, Aufgabe 2; Lösung eigen")
+_ex("SW9.3", "doSomethingElse() bei 6, 7 oder 8 (n bis 10000)", "Wie oft wird doSomethingElse() aufgerufen (while n <= 10000, if n%6 == 0 or n%7 == 0 or n%8 == 0 sonst doSomethingElse)?",
+    lambda: zk.count_divisible(10000, [6, 7, 8]),
+    [E("6429 else-Aufrufe", lambda r: r.complement, 6429, "Schleife über n = 1 … 10000"),
+     E("doSomething 3571", lambda r: r.count, 3571, "Schleife über n = 1 … 10000"),
+     E("Schleife nachgezählt", lambda r: 10000 - _zaehle_teilbar(10000, (6, 7, 8)), 6429, "unabhängig")],
+    "Erst doSomething() zählen (kgV statt Produkt: 6 und 8 haben den Teiler 2: kgV(6, 8) = 24), dann das Gegenteil.", source="Serie 9, Aufgabe 3; Lösung eigen")
+_ex("SW9.4", "Zahlen bis 100000 teilbar durch 2, 3, 5 oder 7", "Wie viele Zahlen von 1 bis und mit 100000 sind durch die Primzahl 2, 3, 5 oder 7 teilbar?",
+    lambda: zk.count_divisible(100000, [2, 3, 5, 7]),
+    [E("77 143 Zahlen", lambda r: r.count, 77143, "Schleife über 1 … 100000"),
+     E("Schleife nachgezählt", lambda r: _zaehle_teilbar(100000, (2, 3, 5, 7)), 77143, "unabhängig"),
+     E("Gegenteil: 22 857", lambda r: r.complement, 22857, "100000 − 77143")],
+    "Vier Mengen, 15 Schnitte; bei Primzahlen ist jeder Schnitt das Produkt.", source="Serie 9, Aufgabe 4; Lösung eigen")
+_ex("SW9.5", "COMPUTER: Vertauschungen mit mindestens einem festen Platz", "Bei wie vielen Vertauschungen der acht Buchstaben von COMPUTER steht mindestens ein Buchstabe am gleichen Platz?",
+    lambda: zk.count_fixed_point(8),
+    [E("25 487 Vertauschungen", lambda r: r.count, 25487, "Brute Force über alle 40 320 Vertauschungen"),
+     E("Brute Force", lambda r: sum(1 for p in _it.permutations(range(8)) if any(p[i] == i for i in range(8))), 25487, "unabhängig: itertools"),
+     E("ohne festen Platz: 14 833", lambda r: r.complement, 14833, "8! − 25 487 (Anzahl der fixpunktfreien Permutationen)")],
+    "Sᵢ: der i-te Buchstabe bleibt stehen, |Sᵢ| = 7!; k Mengen: (8−k)!.", source="Serie 9, Aufgabe 5; Lösung eigen")
+_ex("SW9.6", "7 Druckaufträge auf 5 Drucker, mindestens ein Drucker frei", "Auf wie viele Arten können 7 Druckaufträge auf 5 Drucker verteilt werden, so dass mindestens ein Drucker frei bleibt?",
+    lambda: zk.count_unused(7, 5),
+    [E("61 325 Verteilungen", lambda r: r.count, 61325, "Brute Force über alle 5⁷ = 78 125 Verteilungen"),
+     E("Brute Force", lambda r: sum(1 for f in _it.product(range(5), repeat=7) if len(set(f)) < 5), 61325, "unabhängig: itertools"),
+     E("alle belegt = Surjektionen: 16 800", lambda r: r.complement, 16800, "5⁷ − 61 325 = count_surjections(7, 5)")],
+    "Sᵢ: Drucker i bleibt frei, |Sᵢ| = 4⁷; k Drucker frei: (5−k)⁷.", source="Serie 9, Aufgabe 6; Lösung eigen")
+
+
+def _worte(n, schlecht):
+    return sum(1 for w in _it.product("01", repeat=n) if schlecht not in "".join(w))
+
+
+def _rek(id, title, task, problem, n, soll, quelle, hint, extra, nr):
+    _ex(id, title, task, lambda: zk.count_recursive(problem, n),
+        [E(f"s({n}) = {_fmt_zahl(soll)}", _cnt, soll, quelle), *extra], hint, source=f"Serie 9, Aufgabe {nr}; Lösung eigen")
+
+
+_rek("SW9.7", "Keine zwei aufeinanderfolgenden Nullen", "In wie vielen Datenworten der Länge n Bit gibt es keine zwei aufeinanderfolgenden Nullen? (hier n = 8)",
+     "no00", 8, 55, "Brute Force über alle 256 Worte",
+     "s(n) = s(n−1) + s(n−2): das Wort endet auf 1 oder auf 10.",
+     [E("Brute Force n = 1 … 14", lambda r: [_worte(n, "00") for n in range(1, 15)], [2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987], "unabhängig aufgezählt")], 7)
+_rek("SW9.8", "Passwörter aus Ziffern mit gerader Anzahl Nullen", "Ein Computersystem akzeptiert nur Passwörter aus Ziffern, in denen eine gerade Anzahl Nullen vorkommt. Wie viele solche Passwörter gibt es? (Länge n, hier n = 4)",
+     "even_zeros", 4, 5000 + 2048, "Brute Force über alle 10⁴ Ziffernwörter",
+     "s(n) = 8·s(n−1) + 10ⁿ⁻¹; die Länge n ist in der Aufgabe nicht genannt (TODO), darum ein Parameter.",
+     [E("Brute Force n = 1 … 5", lambda r: [sum(1 for w in _it.product("0123456789", repeat=n) if w.count("0") % 2 == 0) for n in range(1, 6)], [9, 82, 756, 7048, 66384], "unabhängig aufgezählt"),
+      E("(10ⁿ + 8ⁿ)/2", _cnt, (10 ** 4 + 8 ** 4) // 2, "von Hand")], 8)
+_rek("SW9.9", "Keine drei benachbarten Nullen", "Wie viele Datenworte der Länge n Bit gibt es, die keine drei benachbarten Nullen enthalten? (hier n = 8)",
+     "no000", 8, 149, "Brute Force über alle 256 Worte",
+     "s(n) = s(n−1) + s(n−2) + s(n−3): das Wort endet auf 1, 10 oder 100.",
+     [E("Brute Force n = 1 … 14", lambda r: [_worte(n, "000") for n in range(1, 15)], [2, 4, 7, 13, 24, 44, 81, 149, 274, 504, 927, 1705, 3136, 5768], "unabhängig aufgezählt")], 9)
+_rek("SW9.10", "Datenworte mit dem Muster 01", "Wie viele Datenworte der Länge n Bit gibt es, die das Muster 01 enthalten? (hier n = 8)",
+     "contains01", 8, 247, "Brute Force über alle 256 Worte",
+     "Worte ohne 01 haben die Form 1ᵃ0ᵇ (n + 1 Stück); also 2ⁿ − (n + 1). Rekursiv: t(n) = 2·t(n−1) + (n−1).",
+     [E("Brute Force n = 1 … 14", lambda r: [2 ** n - _worte(n, "01") for n in range(1, 15)], [2 ** n - n - 1 for n in range(1, 15)], "unabhängig aufgezählt"),
+      E("2ⁿ − (n + 1)", _cnt, 2 ** 8 - 9, "von Hand")], 10)
+_rek("SW9.11", "Treppe mit n Stufen, 1 oder 2 Stufen pro Schritt", "Wie viele Möglichkeiten gibt es eine Treppe mit n Stufen hochzusteigen, wenn eine Stufe oder zwei Stufen pro Schritt erlaubt sind? (hier n = 10)",
+     "stairs", 10, 89, "Aufzählen aller Schrittfolgen",
+     "s(n) = s(n−1) + s(n−2): der letzte Schritt ist 1 oder 2 (Fibonacci).",
+     [E("Aufzählen n = 1 … 15", lambda r: [sum(1 for _ in zk._stairs(n)) for n in range(1, 16)], [1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987], "unabhängig aufgezählt")], 11)
+
+_ex("SW9.12", "Vier Würfel, Augensumme 13", "Ein roter, blauer, grüner und gelber Würfel werden geworfen. Wie viele verschiedene Wurfbilder mit Augensumme 13 gibt es?",
+    lambda: zk.gf_count([range(1, 7)] * 4, 13),
+    [E("140 Wurfbilder", _cnt, 140, "Brute Force über alle 6⁴ = 1296 Würfe"),
+     E("Brute Force", lambda r: sum(1 for c in _it.product(range(1, 7), repeat=4) if sum(c) == 13), 140, "unabhängig: itertools")],
+    "Erzeugende Funktion (x + x² + … + x⁶)⁴, Koeffizient von x¹³.", source="Serie 9, Aufgabe 12; Lösung eigen")
+_ex("SW9.13", "8 gleiche Jobs auf 3 Server, je 2 bis 4", "Auf wie viele Arten können 8 gleiche Jobs auf drei verschiedene Server verteilt werden, wenn jeder Server mindestens 2 aber höchstens 4 Jobs verarbeiten soll?",
+    lambda: zk.gf_count([range(2, 5)] * 3, 8),
+    [E("6 Verteilungen", _cnt, 6, "Brute Force über (x₁, x₂, x₃) mit 2 ≤ xᵢ ≤ 4 und Summe 8"),
+     E("Brute Force", lambda r: sum(1 for c in _it.product(range(2, 5), repeat=3) if sum(c) == 8), 6, "unabhängig: itertools")],
+    "x₁ + x₂ + x₃ = 8 mit xᵢ ∈ {2, 3, 4}: (x² + x³ + x⁴)³, Koeffizient von x⁸.", source="Serie 9, Aufgabe 13; Lösung eigen")
+
+
+def _muenz_folgen(rest):
+    return 1 if rest == 0 else sum(_muenz_folgen(rest - c) for c in (1, 2, 5) if c <= rest)
+
+
+_ex("SW9.14a", "15 Franken mit 1-, 2-, 5-Franken-Stücken bezahlen", "Ein Geldautomat akzeptiert 1, 2 oder 5 Franken Stücke. Wie viele Möglichkeiten gibt es einen Betrag von 15 Franken mit solchen Münzen zu bezahlen (erzeugende Funktion)?",
+    lambda: zk.gf_coins([1, 2, 5], 15),
+    [E("18 Möglichkeiten", _cnt, 18, "Brute Force über (a, b, c) mit a + 2b + 5c = 15"),
+     E("Brute Force", lambda r: sum(1 for a in range(16) for b in range(8) for c in range(4) if a + 2 * b + 5 * c == 15), 18, "unabhängig")],
+    "Je Münze 1/(1 − xᶜ) = 1 + xᶜ + x²ᶜ + …; Koeffizient von x¹⁵ im Produkt.", source="Serie 9, Aufgabe 14 a; Lösung eigen")
+_ex("SW9.14b", "15 Franken der Reihe nach einwerfen", "… einen Betrag von 15 Franken der Reihe nach einzuwerfen (erzeugende Funktion)?",
+    lambda: zk.gf_coins([1, 2, 5], 15, ordered=True),
+    [E("1843 Folgen", _cnt, 1843, "Aufzählen aller Münzfolgen mit Summe 15"),
+     E("Aufzählen aller Folgen", lambda r: _muenz_folgen(15), 1843, "unabhängig: rekursiv ohne Potenzreihe")],
+    "Eine Folge der Länge k hat die erzeugende Funktion (x + x² + x⁵)ᵏ; alle Längen: 1/(1 − (x + x² + x⁵)).", source="Serie 9, Aufgabe 14 b; Lösung eigen")
+_ex("SW9.B1", "PIN mit vier Ziffern: ungültige PINs", "Ein PIN darf nicht mit drei gleichen Ziffern beginnen oder enden. Wie viele ungültige PINs gibt es? (|S₁ ∪ S₂| = 100 + 100 − 10)",
+    lambda: zk.inclusion_exclusion([{f"{n:04d}" for n in range(10000) if len(set(f"{n:04d}"[:3])) == 1}, {f"{n:04d}" for n in range(10000) if len(set(f"{n:04d}"[1:])) == 1}]),
+    [E("|S₁| = |S₂| = 100, |S₁ ∩ S₂| = 10, |S| = 190", lambda r: (r.summe, r.exklusion, r.count), (200, 10, 190), "Serie 9, Frage 1 (Beispiel im Text)")],
+    "Summenregel zählt die 10 PINs 0000, 1111, … doppelt; einmal wegnehmen.", source="Serie 9, Frage 1 (Beispiel im Text)")
+_ex("SW9.B2", "Drei Mengen: {1, …, 7}", "S = {1, …, 7} = {1, 4, 5, 7} ∪ {2, 4, 6, 7} ∪ {3, 5, 6, 7}: Prüfen Sie |S| = 4 + 4 + 4 − 2 − 2 − 2 + 1.",
+    lambda: zk.inclusion_exclusion([{1, 4, 5, 7}, {2, 4, 6, 7}, {3, 5, 6, 7}]),
+    [E("12 + 1 − 6 = 7", lambda r: (r.summe, r.inklusion, r.exklusion, r.count), (12, 1, 6, 7), "Serie 9, Frage 1 (Beispiel im Text)")],
+    "Elemente 1, 2, 3 in keinem Schnitt, 4, 5, 6 in genau einem, 7 in allen vier.", source="Serie 9, Frage 1 (Beispiel im Text)")
+_ex("SW9.B3", "Erzeugende Funktion: x₁ + x₂ + x₃ = 11", "Wie viele Lösungen hat x₁ + x₂ + x₃ = 11, wenn x₁ ∈ {2, 3, 4}, x₂ ∈ {3, 4} und x₃ ∈ {4, 5} gelten muss?",
+    lambda: zk.gf_count([[2, 3, 4], [3, 4], [4, 5]], 11),
+    [E("4 Lösungen (Koeffizient 4 bei x¹¹)", _cnt, 4, "Serie 9, Frage 3 (Beispiel im Text)"),
+     E("x⁹ + 3x¹⁰ + 4x¹¹ + 3x¹² + x¹³", lambda r: dict(sorted(r.poly.items())), {9: 1, 10: 3, 11: 4, 12: 3, 13: 1}, "Serie 9, Seite 12")],
+    "Produkt (x² + x³ + x⁴)(x³ + x⁴)(x⁴ + x⁵) ausmultiplizieren.", source="Serie 9, Frage 3 (Beispiel im Text)")
 
 
 # ==========================================================================

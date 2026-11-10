@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Tests für dmatkit.aufgaben.exercises: python3 tests/tests_exercises.py
 
-Jede Aufgabe der Serien 1 bis 8, des Lerngerüsts und der Vorlesungsbeispiele muss laufen und mit dem Soll
+Jede Aufgabe der Serien 1 bis 9, des Lerngerüsts und der Vorlesungsbeispiele muss laufen und mit dem Soll
 übereinstimmen. Die Soll-Werte stammen aus den Serien, der Mitschrift, Python-Builtins oder Brute-Force,
 nie aus der Ausgabe von dmatkit selbst. Dieser Test rechnet die wichtigsten Werte noch einmal unabhängig nach.
 """
@@ -50,7 +50,7 @@ for k in ex.EXERCISES:
 # ==========================================================================
 # 2. Aufbau und Vollständigkeit
 # ==========================================================================
-wochen = {w: ex.liste(w) for w in range(1, 9)}
+wochen = {w: ex.liste(w) for w in range(1, 10)}
 ok(sum(len(v) for v in wochen.values()) == len(ex.EXERCISES))
 ok(all(len(v) > 0 for v in wochen.values()))
 ok(ex.liste() == list(ex.EXERCISES))
@@ -60,16 +60,16 @@ for art in ("Serie", "Beispiel", "Lerngerüst", "optional"):
     sub = ex.liste(art=art)
     ok(len(sub) > 0 and all(ex.aufgabe(k).kind == art for k in sub))
 ok(ex.liste(3, "serie") == [k for k in wochen[3] if ex.aufgabe(k).kind == "Serie"])
-raises(KeyError, ex.liste, 9, text="keine Aufgaben")
+raises(KeyError, ex.liste, 10, text="keine Aufgaben")
 raises(KeyError, ex.liste, "Woche drei", text="Unbekannte Woche")
 repr(ex.liste(2))
 ex.liste(2)._repr_html_()
 ok(repr(ex.liste(art="Beispiel")).count("\n") >= 10)
 
 ids = list(ex.EXERCISES)
-ok(len(ids) == len(set(ids)) and all(re.fullmatch(r"(SW|LG)[1-8]\.[A-Za-z0-9]+", k) for k in ids))
+ok(len(ids) == len(set(ids)) and all(re.fullmatch(r"(SW|LG)[1-9]\.[A-Za-z0-9]+", k) for k in ids))
 for k, e in ex.EXERCISES.items():
-    ok(e.id == k and 1 <= e.week <= 8 and str(e.week) == k[2], k)
+    ok(e.id == k and 1 <= e.week <= 9 and str(e.week) == k[2], k)
     ok(isinstance(e.title, str) and len(e.title) > 3 and isinstance(e.task, str) and len(e.task) > 10, k)
     ok(callable(e.call) and len(e.expected) >= 1, k)
     ok(isinstance(e.hint, str) and e.hint != "", f"{k}: Hinweis fehlt")
@@ -79,7 +79,7 @@ for k, e in ex.EXERCISES.items():
     e._repr_html_()
     ok("erwartet" not in e.task.lower(), k)
 
-# Alle Aufgaben der Serien 1 bis 8 sind vorhanden (nach den Übungsblättern)
+# Alle Aufgaben der Serien 1 bis 9 sind vorhanden (nach den Übungsblättern)
 SOLL = {
     1: ["SW1.1a", "SW1.1b", "SW1.1c", "SW1.1d", "SW1.1e", "SW1.2", "SW1.3", "SW1.4", "SW1.5a32", "SW1.5b32", "SW1.5a64", "SW1.5b64", "SW1.6", "SW1.7a"],
     2: ["SW2.1a", "SW2.1b", "SW2.2", "SW2.3a", "SW2.3b", "SW2.4a", "SW2.4b", "SW2.5", "SW2.6", "SW2.7a", "SW2.7b", "SW2.7c", "SW2.7d", "SW2.7e"],
@@ -94,6 +94,7 @@ SOLL = {
     8: ["SW8.1", "SW8.2", "SW8.3", "SW8.4", "SW8.5", "SW8.6", "SW8.7", "SW8.8a", "SW8.8b", "SW8.9", "SW8.10", "SW8.11",
         "SW8.12a", "SW8.12b", "SW8.12c", "SW8.13", "SW8.14a", "SW8.14b", "SW8.15", "SW8.16", "SW8.17", "SW8.18",
         "SW8.19a", "SW8.19b", "SW8.19c", "SW8.20a", "SW8.20b", "SW8.21", "SW8.22a", "SW8.22b", "SW8.22c"],
+    9: [f"SW9.{i}" for i in range(1, 14)] + ["SW9.14a", "SW9.14b"],
 }
 for w, soll in SOLL.items():
     for k in soll:
@@ -117,8 +118,8 @@ msg = raises(KeyError, ex.aufgabe, "SW3.5")
 ok("SW3.5a" in msg, "Vorschläge bei Teil-Schlüssel")
 raises(KeyError, ex.aufgabe, "SW3.55")
 raises(KeyError, ex.aufgabe, "quatsch", text="liste()")
-raises(KeyError, ex.loesen, "SW9.1")
-raises(KeyError, ex.pruefen, "SW9.1")
+raises(KeyError, ex.loesen, "SW10.1")
+raises(KeyError, ex.pruefen, "SW10.1")
 for k in ex.EXERCISES:
     r = ex.loesen(k)
     ok(isinstance(r, Result) and len(r.steps) > 0, k)
@@ -271,4 +272,4 @@ ok(a1 == a2 and all(v for _, v in a1))
 ok(repr(ex.loesen("SW5.1a")) == repr(ex.loesen("SW5.1a")))
 
 print(f"tests_exercises.py: {N[0]} Prüfungen bestanden, {len(ex.EXERCISES)} Aufgaben ("
-      + ", ".join(f"SW{w}: {len(wochen[w])}" for w in range(1, 9)) + ")")
+      + ", ".join(f"SW{w}: {len(wochen[w])}" for w in range(1, 10)) + ")")
