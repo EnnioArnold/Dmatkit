@@ -42,7 +42,7 @@ __all__ = [
     "pruefe_dec_to_bin", "pruefe_binaer_zu_dezimal", "pruefe_forall", "pruefe_exists", "pruefe_hat_duplikate",
     "pruefe_palindrom", "pruefe_wahrheitstabelle", "pruefe_folgerung", "pruefe_resolvente",
     "pruefe_lineare_suche", "pruefe_selection_sort", "pruefe_merge_sort", "pruefe_hanoi",
-    "pruefe_muenzen", "pruefe_ueberdeckung", "pruefe_quick_sort", "pruefe_ungerade_zahlen",
+    "pruefe_muenzen", "pruefe_ueberdeckung", "pruefe_quick_sort", "pruefe_ungerade_zahlen", "pruefe_teilbare",
     "pruefe_klassifikation", "pruefe_potenzmenge", "pruefe_dezimal_zu_bruch", "pruefe_binaer_nachkomma",
 ]
 
@@ -213,6 +213,14 @@ def meine_ungerade_zahlen(ziffern):
     # TODO: alle Anordnungen der Ziffern (itertools.permutations), doppelte Anordnungen nur einmal
     # TODO: führende 0 und gerade letzte Ziffer aussortieren
     return []
+''',
+    "meine_teilbare": '''
+def meine_teilbare(limit, teiler):
+    """Serie 9, Aufgaben 2 bis 4: Wie viele Zahlen von 1 bis limit sind durch mindestens eine der Zahlen in `teiler` teilbar?
+    Gibt eine ganze Zahl zurück, z. B. meine_teilbare(10, [2, 3]) -> 7 (2, 3, 4, 6, 8, 9, 10)."""
+    # TODO: für jede Teilmenge der Teiler das kgV bilden (math.lcm) und limit // kgV zählen
+    # TODO: Teilmengen ungerader Grösse addieren, gerader Grösse abziehen (Inklusion und Exklusion)
+    return 0
 ''',
     "meine_klassifikation": '''
 def meine_klassifikation(f_func, n_vars):
@@ -1078,6 +1086,28 @@ def pruefe_ungerade_zahlen(funktion: Callable, ausfuehrlich: bool = True, ausgab
         soll = sorted({int("".join(map(str, q))) for q in itertools.permutations(z) if q[0] != 0 and q[-1] % 2 == 1})
         _lauf(p, funktion, name, (z,), soll, pruefer, h)
     p.infos.append("Ansatz: Anzahl nach der Zählregel bestimmen (Permutationen mit Wiederholungen) und die Liste damit prüfen.")
+    return _abschluss(p, ausgabe, ausfuehrlich)
+
+
+# ==========================================================================
+# SW9: Komplexere Zähltechniken
+# ==========================================================================
+def pruefe_teilbare(funktion: Callable, ausfuehrlich: bool = True, ausgabe: bool | None = None) -> Pruefung:
+    """Prüft `meine_teilbare(limit, teiler)`: Anzahl der Zahlen von 1 bis limit, die durch mindestens einen Teiler teilbar sind (Serie 9, Aufgaben 2 bis 4)."""
+    p = Pruefung("Teilbare Zahlen zählen")
+
+    def pruefer(ist, soll):
+        if isinstance(ist, bool) or not isinstance(ist, int):
+            return f"Falscher Rückgabetyp: erwartet int, erhalten {_tn(ist)}."
+        if ist != soll:
+            return f"Falsch: {ist} statt {soll}."
+        return None
+    for name, limit, ds, h in [("Serie 9, Aufgabe 2", 1000, [2, 3, 5], "734"), ("Serie 9, Aufgabe 4", 100000, [2, 3, 5, 7], "77143"),
+                               ("ein Teiler", 100, [7], "100 // 7 = 14"), ("Teiler 6, 7, 8 (kgV beachten)", 10000, [6, 7, 8], "6 und 8 haben den Teiler 2: kgV(6, 8) = 24"),
+                               ("limit unter dem Teiler", 5, [7], "0"), ("Teiler 1", 20, [1, 4], "alle 20"), ("doppelter Teiler", 30, [3, 3], "10, nicht 20")]:
+        soll = sum(1 for m in range(1, limit + 1) if any(m % d == 0 for d in ds))
+        _lauf(p, funktion, name, (limit, ds), soll, pruefer, h)
+    p.infos.append("Ansatz: Inklusion und Exklusion; zwei Zahlen mit gemeinsamem Teiler haben als Schnitt das kgV, nicht das Produkt.")
     return _abschluss(p, ausgabe, ausfuehrlich)
 
 

@@ -9,6 +9,7 @@ import os
 import sys
 import time
 import itertools
+import math
 import threading
 from fractions import Fraction
 
@@ -513,7 +514,7 @@ def f_nk_ohne_periode(z, n):            # Fehler: bricht nach 8 Stellen ab
 # ==========================================================================
 ok(len(u.VORLAGEN) >= 13 and set(u.namen()) == set(u.VORLAGEN))
 for nm in ("meine_dec_to_bin", "meine_binaer_zu_dezimal", "mein_forall", "mein_exists", "meine_hat_duplikate", "mein_palindrom",
-           "meine_wahrheitstabelle", "meine_folgerung", "meine_resolvente", "meine_lineare_suche", "mein_selection_sort", "mein_merge_sort", "meine_hanoi", "meine_muenzen", "meine_ueberdeckung", "mein_quick_sort", "meine_ungerade_zahlen"):
+           "meine_wahrheitstabelle", "meine_folgerung", "meine_resolvente", "meine_lineare_suche", "mein_selection_sort", "mein_merge_sort", "meine_hanoi", "meine_muenzen", "meine_ueberdeckung", "mein_quick_sort", "meine_ungerade_zahlen", "meine_teilbare"):
     ok(nm in u.VORLAGEN, nm)
     src = u.vorlage(nm)
     ok(src.startswith("def " + nm), nm)
@@ -537,7 +538,7 @@ for nm, pr in [("meine_dec_to_bin", u.pruefe_dec_to_bin), ("meine_binaer_zu_dezi
                ("meine_lineare_suche", u.pruefe_lineare_suche), ("mein_selection_sort", u.pruefe_selection_sort),
                ("mein_merge_sort", u.pruefe_merge_sort), ("meine_hanoi", u.pruefe_hanoi),
                ("meine_muenzen", u.pruefe_muenzen), ("meine_ueberdeckung", u.pruefe_ueberdeckung), ("mein_quick_sort", u.pruefe_quick_sort),
-               ("meine_ungerade_zahlen", u.pruefe_ungerade_zahlen),
+               ("meine_ungerade_zahlen", u.pruefe_ungerade_zahlen), ("meine_teilbare", u.pruefe_teilbare),
                ("meine_klassifikation", u.pruefe_klassifikation), ("meine_potenzmenge", u.pruefe_potenzmenge),
                ("meine_dezimal_zu_bruch", u.pruefe_dezimal_zu_bruch), ("meine_binaer_nachkomma", u.pruefe_binaer_nachkomma)]:
     ns = {}
@@ -826,6 +827,28 @@ schlecht(u.pruefe_quick_sort, lambda a: sorted(a, reverse=True), "absteigend")
 schlecht(u.pruefe_quick_sort, lambda a: a[:1], "Elemente gehen verloren")
 p = u.pruefe_quick_sort(r_qs, ausgabe=False)
 ok(p.gesamt == 10 and p.ok)
+
+# SW9: komplexere Zähltechniken
+def r_tb(limit, ds):
+    return sum(1 for m in range(1, limit + 1) if any(m % d == 0 for d in ds))
+
+
+def r_tb_ie(limit, ds):                 # richtig: Inklusion und Exklusion mit kgV
+    return sum((-1) ** (k + 1) * (limit // math.lcm(*c)) for k in range(1, len(ds) + 1) for c in itertools.combinations(ds, k))
+
+
+def f_tb_produkt(limit, ds):            # Fehler: Produkt statt kgV (falsch bei 6, 8)
+    return sum((-1) ** (k + 1) * (limit // math.prod(c)) for k in range(1, len(ds) + 1) for c in itertools.combinations(ds, k))
+
+
+gut(u.pruefe_teilbare, r_tb, "teilbare (Schleife)")
+gut(u.pruefe_teilbare, r_tb_ie, "teilbare (Inklusion/Exklusion)")
+p = u.pruefe_teilbare(r_tb_ie, ausgabe=False)
+ok(p.gesamt == 7 and p.ok)
+schlecht(u.pruefe_teilbare, f_tb_produkt, "Produkt statt kgV", "6, 7, 8")
+schlecht(u.pruefe_teilbare, lambda limit, ds: sum(limit // d for d in ds), "nur Summe")
+schlecht(u.pruefe_teilbare, lambda limit, ds: float(r_tb(limit, ds)), "float")
+schlecht(u.pruefe_teilbare, lambda limit, ds: None, "kein return")
 
 # SW8: Zähltechniken
 def r_uz(z):
