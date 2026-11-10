@@ -2449,7 +2449,7 @@ def paint_orbs(p: QPainter, spots: Sequence[tuple[float, float, float, str]], wi
     """
     p.save()
     p.setPen(Qt.NoPen)
-    alpha = 0.10 if T["dark"] else 0.42
+    alpha = 0.07 if T["dark"] else 0.42
     for fx, fy, fr, color in spots:
         r = fr * width
         grad = QRadialGradient(QPointF(fx * width, fy * height), r)
@@ -4683,6 +4683,12 @@ class MainWindow(QMainWindow):
         self._build()
         self.toasts = ToastArea(self.centralWidget())
         self.apply_theme()
+        # Neun Reiter müssen in die Kopfzeile passen: Fenster nie schmaler als die Leiste.
+        self.setMinimumWidth(max(1040, self._nav_width()))
+
+    def _nav_width(self) -> int:
+        """Breite, die die Kopfzeile braucht: Ränder, Marke, neun Reiter, Thema, Hilfe."""
+        return self.nav.layout().minimumSize().width()
 
     # -- Aufbau -----------------------------------------------------------
 
@@ -4701,7 +4707,7 @@ class MainWindow(QMainWindow):
         self.brand = label("dmatkit", 13, weight=QFont.DemiBold)
         nav_lay.addWidget(self.brand)
         nav_lay.addSpacing(18)
-        self.seg_page = Segmented([re.sub(r" \(SW\d+\)$", "", PAGES[k].tab) for k in PAGE_KEYS], 0, pad=18)   # neun Reiter müssen in die Kopfzeile passen
+        self.seg_page = Segmented([re.sub(r" \(SW\d+\)$", "", PAGES[k].tab) for k in PAGE_KEYS], 0, pad=14)   # neun Reiter müssen in die Kopfzeile passen
         self.seg_page.changed.connect(self.set_page)
         nav_lay.addWidget(self.seg_page)
         nav_lay.addStretch(1)
@@ -4709,7 +4715,8 @@ class MainWindow(QMainWindow):
         self.seg_theme.changed.connect(self.set_theme)
         nav_lay.addWidget(self.seg_theme)
         nav_lay.addSpacing(6)
-        nav_lay.addWidget(pill("Hilfe", "plain", self.show_help, small=True))
+        self.help_btn = pill("Hilfe", "plain", self.show_help, small=True)
+        nav_lay.addWidget(self.help_btn)
         outer.addWidget(self.nav)
 
         self.hairline = QFrame()
