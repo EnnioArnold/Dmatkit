@@ -2,7 +2,7 @@
 """
 Manim-Animationen (freiwillig): der Rechenweg jedes Ergebnisses, Schritt für Schritt.
 
-Swiss Style wie die App: Schwarz/Weiss mit einem Rot (#e60000).
+Look wie die App (design.py): Canvas, Tinte, weiche Pastell-Orbs.
 
 Engine: manimgx wird bevorzugt (schnell, bringt die Videoausgabe selbst mit,
 kein ffmpeg und kein Cairo/Pango nötig). Ist es nicht installiert, fällt
@@ -37,6 +37,8 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Callable
 
+from .. import design as ds
+
 #: Grösse und Bildrate je Qualitätsstufe (Manim-CE-Kürzel dahinter).
 QUALITIES = {
     "low": ("854x480", "15", "-ql"),
@@ -52,15 +54,18 @@ MAX_TABLE_ROWS = 10
 
 @dataclass
 class Theme:
-    """Farben der Animation: Swiss Style, Schwarz/Weiss mit einem Rot."""
-    background: str = "#ffffff"
-    text: str = "#000000"
-    muted: str = "#666666"
-    accent: str = "#e60000"
+    """Farben der Animation: Canvas, Tinte, Pastell (Werte aus design.py)."""
+    background: str = ds.ANIM_LIGHT["background"]
+    text: str = ds.ANIM_LIGHT["text"]
+    muted: str = ds.ANIM_LIGHT["muted"]
+    accent: str = ds.ANIM_LIGHT["accent"]
+    good: str = ds.ANIM_LIGHT["good"]     # Markierung »ok«
+    bad: str = ds.ANIM_LIGHT["bad"]       # Markierung »bad«
+    soft: str = ds.ANIM_LIGHT["soft"]     # Hairline, Fortschrittsspur
 
     @staticmethod
     def dark() -> "Theme":
-        return Theme(background="#000000", text="#ffffff", muted="#999999", accent="#ff3333")
+        return Theme(**ds.ANIM_DARK)
 
 
 @dataclass
@@ -174,6 +179,16 @@ INSTALL_HINT = ("pip install manimgx   # Rendering und Videoausgabe in einem Pak
 # Die Szene
 # --------------------------------------------------------------------------
 
+def _pick_font(wish=("Inter",)) -> str | None:
+    """Erste System-Schrift aus der Wunschliste (nur per Name auffindbar), sonst None."""
+    try:
+        from matplotlib import font_manager
+        have = {f.name for f in font_manager.fontManager.ttflist}
+    except Exception:
+        return None
+    return next((n for n in wish if n in have), None)
+
+
 def _build_scenes():
     """Erzeugt die Szenenklassen erst beim Aufruf, damit das Modul ohne Manim importierbar bleibt."""
     mod = importlib.import_module(engine())
@@ -181,11 +196,20 @@ def _build_scenes():
      GrowFromCenter, Transform, ReplacementTransform, DOWN, LEFT, RIGHT, UP, DR, UL) = (
         getattr(mod, n) for n in ("Scene VGroup FadeIn FadeOut Create Line Rectangle ImageMobject LaggedStart Indicate "
                                   "Flash GrowFromCenter Transform ReplacementTransform DOWN LEFT RIGHT UP DR UL").split())
-    font = "Noto Sans" if engine() == "manimgx" else None
+    if engine() == "manimgx":
+        font = _pick_font() or "Noto Sans"
+        display_font = _pick_font(("EB Garamond",)) or font
+    else:
+        font = _pick_font()                 # Manim CE: Inter, sonst Standardschrift
+        display_font = _pick_font(("EB Garamond",)) or font
+    ease = getattr(mod, "ease_in_out_sine", None)
+    Rounded = getattr(mod, "RoundedRectangle", None)
+    Circle = getattr(mod, "Circle", None)
 
-    def Text(*args, **kw):
-        if font:
-            kw.setdefault("font", font)
+    def Text(*args, display=False, **kw):
+        fam = display_font if display else font
+        if fam:
+            kw.setdefault("font", fam)
         return mod.Text(*args, **kw)
 
     def wrap(text, width):
@@ -220,11 +244,27 @@ def _build_scenes():
             val = Text(wrap(value, 46), font_size=46 if big else 36, color=ink)
             col = VGroup(*([Text(name, font_size=22, color=soft)] if name else []), val)
             col.arrange(DOWN, aligned_edge=LEFT, buff=0.1)
-            bar = Line(col.get_top(), col.get_bottom(), color=ink if on_band else th.accent, stroke_width=6)
+            bar = Line(col.get_top(), col.get_bottom(), color=ink if on_band else th.soft, stroke_width=5)
             return VGroup(bar, col).arrange(RIGHT, buff=0.3)
 
         def go(self, *anims, run_time=1.0):
-            self.play(*anims, run_time=run_time * self.speed)
+            # ruhigere Zeitkurve: sanft an- und auslaufend
+            kw = {"rate_func": ease} if ease else {}
+            self.play(*anims, run_time=run_time * self.speed, **kw)
+
+        def orbs(self, th):
+            """Drei weiche Pastell-Orbs: konzentrische Kreise mit sehr geringer Deckkraft."""
+            if Circle is None or os.environ.get("DMATKIT_NO_ORBS"):
+                return VGroup()
+            dark = th.background.lower() < "#808080"
+            spots = [(4.8, 2.2, 3.4, ds.LAVENDER), (6.2, 0.2, 2.4, ds.PEACH),
+                     (2.6, 3.4, 2.2, ds.MINT)]
+            rings = []
+            for x, y, r, color in spots:
+                for k in range(16):
+                    rings.append(Circle(radius=r * (1 - k / 16), stroke_width=0, fill_color=color,
+                                        fill_opacity=(0.006 if dark else 0.026)).move_to([x, y, 0]))
+            return VGroup(*rings)
 
         def pause(self, seconds):
             self.wait(seconds * self.speed)
@@ -236,19 +276,20 @@ def _build_scenes():
             self.speed = 1.0 if n <= 8 else max(0.45, 8 / n)    # lange Rechenwege laufen schneller
             W, y = self.W, self.BAR_Y
             self.camera.background_color = th.background
+            self.add(self.orbs(th))
 
             # --- Titelkarte
-            big = Text(job.title, font_size=56, color=th.text)
+            big = Text(job.title, font_size=60, color=th.text, display=True)
             big.scale(min(1.0, 12.0 / big.width))
-            rule = Line(LEFT * 1.6, RIGHT * 1.6, color=th.accent, stroke_width=10).next_to(big, DOWN, buff=0.5)
+            rule = Line(LEFT * 1.6, RIGHT * 1.6, color=th.soft, stroke_width=3).next_to(big, DOWN, buff=0.5)
             sub = Text(f"Rechenweg in {sum(1 for s in slides if not s['final'])} Schritten",
                        font_size=28, color=th.muted).next_to(rule, DOWN, buff=0.4)
             self.go(FadeIn(big, shift=UP * 0.3), Create(rule), run_time=1.0)
             self.go(FadeIn(sub), run_time=0.4)
             self.pause(0.7)
             small = Text(job.title, font_size=22, color=th.muted).to_corner(UL, buff=0.45)
-            track = Line([-W / 2, y, 0], [W / 2, y, 0], color=th.muted, stroke_width=2).set_opacity(0.35)
-            bar = Line([-W / 2, y, 0], [-W / 2 + 0.01, y, 0], color=th.accent, stroke_width=7)
+            track = Line([-W / 2, y, 0], [W / 2, y, 0], color=th.soft, stroke_width=3)
+            bar = Line([-W / 2, y, 0], [-W / 2 + 0.01, y, 0], color=th.accent, stroke_width=5)
             self.go(ReplacementTransform(big, small), FadeOut(rule), FadeOut(sub), FadeIn(track),
                       run_time=0.8)
             counter = None
@@ -256,7 +297,7 @@ def _build_scenes():
             for k, s in enumerate(slides):
                 final = s["final"]
                 # Fortschritt
-                new_bar = Line([-W / 2, y, 0], [-W / 2 + W * (k + 1) / n, y, 0], color=th.accent, stroke_width=7)
+                new_bar = Line([-W / 2, y, 0], [-W / 2 + W * (k + 1) / n, y, 0], color=th.accent, stroke_width=5)
                 new_counter = Text(f"{k + 1:02d} / {n:02d}", font_size=20, color=th.muted).to_corner(DR, buff=0.45)
                 new_counter.shift(UP * 0.35)
 
@@ -264,15 +305,18 @@ def _build_scenes():
                 ink = th.background if final else th.text
                 head_parts = []
                 if s["num"] and not final:
-                    head_parts.append(Text(f"{s['num']:02d}", font_size=84, color=th.accent))
-                head_parts.append(Text(wrap(s["head"], 34), font_size=44 if not final else 40, color=ink))
+                    head_parts.append(Text(f"{s['num']:02d}", font_size=84, color=th.muted, display=True))
+                head_parts.append(Text(wrap(s["head"], 34), font_size=44 if not final else 40, color=ink, display=not final))
                 head = VGroup(*head_parts).arrange(RIGHT, buff=0.45, aligned_edge=DOWN if s["num"] and not final else UP)
                 body = [head]
                 chip = None
                 if s["rule"]:
-                    label = Text("Regel   " + s["rule"], font_size=24, color=th.accent)
-                    chip = VGroup(Rectangle(width=label.width + 0.6, height=label.height + 0.36,
-                                            color=th.accent, stroke_width=2.5), label)
+                    label = Text("Regel   " + s["rule"], font_size=24, color=th.text)
+                    h_ = label.height + 0.36
+                    shape = (Rounded(corner_radius=h_ / 2, width=label.width + 0.6, height=h_,
+                                     color=th.soft, stroke_width=2) if Rounded else
+                             Rectangle(width=label.width + 0.6, height=h_, color=th.soft, stroke_width=2))
+                    chip = VGroup(shape, label)
                     label.move_to(chip[0])
                     body.append(chip)
                 if s["detail"]:
@@ -304,19 +348,25 @@ def _build_scenes():
                 extras = []
                 if picture is not None:
                     picture.move_to([0, -1.0, 0])      # die ganze freie Fläche unter der Überschrift
-                    frame = Rectangle(width=picture.width + 0.25, height=picture.height + 0.25,
-                                      color=th.accent, stroke_width=3).move_to(picture)
+                    frame = (Rounded(corner_radius=0.25, width=picture.width + 0.3, height=picture.height + 0.3,
+                                     color=th.soft, stroke_width=3) if Rounded else
+                             Rectangle(width=picture.width + 0.3, height=picture.height + 0.3,
+                                       color=th.soft, stroke_width=3)).move_to(picture)
                     extras += [frame, picture]
                 if final:
-                    band = Rectangle(width=W + 0.4, height=group.height + 1.3, color=th.accent,
-                                     fill_color=th.accent, fill_opacity=1, stroke_width=0)
+                    bw, bh = W + 0.4, group.height + 1.3
+                    band = (Rounded(corner_radius=0.35, width=bw, height=bh, color=th.accent,
+                                    fill_color=th.accent, fill_opacity=1, stroke_width=0) if Rounded else
+                            Rectangle(width=bw, height=bh, color=th.accent,
+                                      fill_color=th.accent, fill_opacity=1, stroke_width=0))
                     band.move_to(group)
                     extras.append(band)
                 if table_rows:
                     for r, rg in enumerate(table_rows):
                         if marks[r] in ("hi", "bad", "ok") and r > 0:
+                            tone = {"ok": th.good, "bad": th.bad, "hi": th.muted}[marks[r]]
                             hl = Rectangle(width=tbl.width + 0.5, height=0.44, stroke_width=0,
-                                           fill_color=th.accent, fill_opacity=0.14 if marks[r] != "ok" else 0.06)
+                                           fill_color=tone, fill_opacity=0.16)
                             hl.move_to([tbl.get_center()[0], rg.get_center()[1], 0])
                             extras.append(hl)
 
@@ -342,14 +392,13 @@ def _build_scenes():
                     self.go(LaggedStart(*[FadeIn(r, shift=RIGHT * 0.35) for r in rows_], lag_ratio=0.35),
                               run_time=0.5 + 0.35 * len(rows_))
                     if not final:
-                        self.go(Indicate(rows_[-1], color=th.accent, scale_factor=1.06), run_time=0.7)
+                        self.go(Indicate(rows_[-1], color=th.text, scale_factor=1.03), run_time=0.7)
                     else:
-                        self.go(Flash(rows_[0], color=th.background, line_length=0.3, flash_radius=0.5),
-                                  run_time=0.8)
+                        self.pause(0.4)
                 if picture is not None:
                     self.go(Create(extras[0]), run_time=0.6)
                     self.go(FadeIn(picture, shift=UP * 0.25), run_time=0.9)
-                    self.go(Indicate(extras[0], color=th.accent, scale_factor=1.015), run_time=0.6)
+                    self.go(Indicate(extras[0], color=th.muted, scale_factor=1.01), run_time=0.6)
                 if table_rows:
                     self.go(LaggedStart(*[FadeIn(rg, shift=DOWN * 0.12) for rg in table_rows],
                                           lag_ratio=0.18), run_time=0.8 + 0.18 * len(table_rows))
@@ -490,7 +539,7 @@ if __name__ == "__main__":
         print(_why)
         print(_mod.INSTALL_HINT)
         sys.exit(1)
-    _dk = importlib.import_module(_mod.__name__.rsplit(".grafik", 1)[0])
+    _dk = importlib.import_module((__package__ or _here.name).split(".")[0])
     _n = int(sys.argv[1]) if len(sys.argv) > 1 else 409
     print("Fertig:", _mod.render(_mod.job_from_result(_dk.to_binary(_n)),
                                  progress=lambda p, t: print(f"{p:3d}%  {t}")))

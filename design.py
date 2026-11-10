@@ -79,5 +79,7 @@ PLOT_DARK = dict(
     series=["#fafaf9", "#8fb4dc", "#e2a07c", "#7fcfb4", "#b9a6dc", "#dc9aa8"])
 
 # --- Animation (Manim) ------------------------------------------------------
-ANIM_LIGHT = dict(background=CARD, text=INK, muted=MUTED, accent=INK)
-ANIM_DARK = dict(background=INK_DEEP, text="#fafaf9", muted=MUTED_SOFT, accent="#fafaf9")
+ANIM_LIGHT = dict(background=CANVAS, text=INK, muted=MUTED, accent=INK,
+                  good=SUCCESS, bad=ERROR, soft=HAIRLINE_STRONG)
+ANIM_DARK = dict(background=INK_DEEP, text="#fafaf9", muted=MUTED_SOFT, accent="#fafaf9",
+                 good="#4ade80", bad="#f87171", soft="#44403c")
