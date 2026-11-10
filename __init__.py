@@ -2,9 +2,9 @@
 """
 dmatkit — Diskrete Mathematik für Datenstrukturen und Algorithmen, mit Rechenweg.
 
-Gebaut zum Modul DMATH-ALGO der HSLU (Semesterwochen 1 bis 8: Datentypen,
+Gebaut zum Modul DMATH-ALGO der HSLU (Semesterwochen 1 bis 9: Datentypen,
 Aussagenlogik, Prädikatenlogik, Beweiskalkül, Analyse von Algorithmen, Rekursion, Induktion,
-Zähltechniken).
+Zähltechniken, komplexere Zähltechniken).
 Jedes Verfahren zeigt den Rechenweg so, wie er in der Prüfung auf dem Papier
 stünde, und nennt die angewandte Regel.
 
@@ -31,6 +31,8 @@ Kurzübersicht
     dk.coins(11)                                                # SW7: starke Induktion, 11 = 3·2 + 1·5
     dk.count_combinations(5, 3)                                 # SW8: C(5, 3) = 10
     dk.count_bitwords(8, ones=2)                                # SW8: 28 Bitwörter mit genau 2 Einsen
+    dk.count_divisible(1000, [2, 3, 5])                         # SW9: Inklusion und Exklusion, 734
+    dk.gf_coins([1, 2, 5], 15)                                  # SW9: erzeugende Funktion, 18 Möglichkeiten
 
 Jedes Ergebnis zeigt sich im Notebook von selbst. `.latex()` liefert den
 Rechenweg zum Einfügen in eine Abgabe, `.show()` zeigt ihn, und für die
@@ -47,7 +49,7 @@ import importlib as _il
 import sys as _sys
 
 from .rechnen import (algorithmen, aussagenlogik, core, datentypen, induktion, kalkuel,
-                      praedikate, rekursion, render, zaehlen)
+                      praedikate, rekursion, render, zaehlen, zaehlkomplex)
 from .rechnen.core import (Formula, Var, Const, Not, And, Or, Xor, Implies, Iff,
                            TRUE, FALSE, parse, big_and, big_or, flatten, bit,
                            assignments, truth_vector, models, is_tautology,
@@ -56,7 +58,7 @@ from .rechnen.render import Result, Step, Table, show_tex, tex_to_text
 
 # Die öffentlichen Namen jeder Semesterwoche. Bei Doppelungen gewinnt SW4
 # (entails liefert ein Ergebnis mit Rechenweg; bool(r) ist die Antwort).
-for _mod in (datentypen, aussagenlogik, praedikate, kalkuel, algorithmen, rekursion, induktion, zaehlen):
+for _mod in (datentypen, aussagenlogik, praedikate, kalkuel, algorithmen, rekursion, induktion, zaehlen, zaehlkomplex):
     for _name in _mod.__all__:
         if _mod is algorithmen and _name in ("classify", "parse_term"):
             continue
@@ -82,6 +84,7 @@ WEEKS = {
     6: ("Rekursive Algorithmen", rekursion),
     7: ("Mathematische Induktion", induktion),
     8: ("Grundlegende Zähltechniken", zaehlen),
+    9: ("Komplexere Zähltechniken", zaehlkomplex),
 }
 
 
@@ -114,6 +117,6 @@ for _alias, _real in (("plots", "grafik.plots"), ("exercises", "aufgaben.exercis
     _sys.modules[f"{__name__}.{_alias}"] = _m
     globals()[_alias] = _m
 for _alias in ("core", "render", "datentypen", "aussagenlogik", "praedikate", "kalkuel",
-               "algorithmen", "rekursion", "induktion", "zaehlen"):
+               "algorithmen", "rekursion", "induktion", "zaehlen", "zaehlkomplex"):
     _sys.modules[f"{__name__}.{_alias}"] = globals()[_alias]
 del _il, _sys, _alias, _real, _m
