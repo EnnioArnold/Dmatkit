@@ -35,7 +35,7 @@ ORBS = (MINT, PEACH, LAVENDER, SKY, ROSE)
 SUCCESS, ERROR = "#16a34a", "#dc2626"
 
 # --- Radien, Abstände, Zeiten --------------------------------------------
-R_CARD, R_INPUT, R_PILL = 16, 8, 999
+R_CARD, R_INPUT, R_PILL = 16, 8, 20      # Pille: mind. halbe Höhe (Qt kennt kein 999px)
 SPACE = 8                   # Grundraster; Seitenabstände sind Vielfache davon
 SHADOW_HOVER = (0, 4, 16, 10)           # x, y, blur, Alpha (0..255) = rgba(0,0,0,.04)
 T_FAST, T_PAGE = 150, 220               # ms

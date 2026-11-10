@@ -60,14 +60,15 @@ except Exception:                                            # pragma: no cover
     pass
 
 from PySide6.QtCore import (QBuffer, QByteArray, QIODevice, QObject, QPoint,
-                            QPointF, QRectF, QSize, Qt, QThread, QTimer, QUrl, Signal)
+                            QPointF, QPropertyAnimation, QRectF, QSize, Qt, QThread, QTimer, QUrl,
+                            QVariantAnimation, Signal)
 from PySide6.QtGui import (QColor, QDesktopServices, QFont, QFontDatabase, QFontInfo, QFontMetricsF,
-                           QGuiApplication, QImage, QPainter, QPen)
+                           QGuiApplication, QImage, QPainter, QPen, QRadialGradient)
 from PySide6.QtWidgets import (QApplication, QDialog, QFileDialog, QFrame,
-                               QGraphicsDropShadowEffect, QHBoxLayout, QLabel,
+                               QGraphicsDropShadowEffect, QGraphicsOpacityEffect, QHBoxLayout, QLabel,
                                QLineEdit, QMainWindow, QMenu, QPlainTextEdit,
                                QPushButton, QScrollArea, QSizePolicy,
-                               QStackedWidget, QVBoxLayout, QWidget)
+                               QStackedWidget, QStyle, QStyleOption, QVBoxLayout, QWidget)
 
 # Dieser Ordner ist selbst das Paket `dmatkit` — auch dann, wenn er nach dem
 # GitHub-Download »dmatkit-main« heisst oder man `python3 app/dmatkit_qt.py`
@@ -87,6 +88,7 @@ import numpy as np                                            # noqa: E402
 import sympy as sp                                            # noqa: E402
 
 import dmatkit as dk                                          # noqa: E402
+from dmatkit import design as ds                              # noqa: E402
 from dmatkit.rechnen.core import fmt                          # noqa: E402
 from dmatkit.rechnen.render import tex_any, text_any, tex_to_text   # noqa: E402
 from orb import ThinkingOrb                                   # noqa: E402
@@ -1997,22 +1999,9 @@ def run_wolfram_checks(appid: str, page: str, p: dict, result, ask=None) -> Wolf
 # Farben und Schriften
 # ==========================================================================
 
-# Swiss Style (wie lialkit und anakit): Schwarz/Weiss, ein Rot, keine Rundungen.
-LIGHT = dict(
-    bg="#ffffff", nav="#ffffff", card="#ffffff", text="#000000", sec="#333333",
-    ter="#666666", line="#000000", hair="#cccccc", fill="#f4f4f4", fill2="#f4f4f4",
-    seg="#ffffff", blue="#000000", blue_hi="#e60000", blue_soft="#f4f4f4",
-    green="#18794e", green_soft="#e6f4ec", red="#e60000", red_soft="#fdecec",
-    amber="#ab5200", amber_soft="#fff4e0", flash="#fff3c4",
-    entry="#ffffff", hi_soft="#e3edfb", scroll="#bdbdbd", shadow=0, dark=False)
-
-DARK = dict(
-    bg="#000000", nav="#000000", card="#000000", text="#ffffff", sec="#cccccc",
-    ter="#888888", line="#ffffff", hair="#333333", fill="#1a1a1a", fill2="#111111",
-    seg="#333333", blue="#e60000", blue_hi="#ff3333", blue_soft="#2a0000",
-    green="#46a758", green_soft="#102a16", red="#ff3333", red_soft="#2a0000",
-    amber="#ffb224", amber_soft="#3a2a0a", flash="#3d3210",
-    entry="#000000", hi_soft="#0e2540", scroll="#555555", shadow=0, dark=True)
+# Werte stehen zentral in dmatkit/design.py (ElevenLabs-inspiriert, siehe README »Design«).
+LIGHT = dict(ds.APP_LIGHT)
+DARK = dict(ds.APP_DARK)
 
 T: dict = dict(LIGHT)
 
@@ -2027,14 +2016,9 @@ def pick_font(candidates: Sequence[str], fallback: str) -> str:
 
 class Fonts:
     def __init__(self):
-        ui = pick_font(["Geist", "Inter", "SF Pro Text", ".AppleSystemUIFont", "Helvetica Neue",
-                        "Segoe UI Variable Text", "Segoe UI", "Inter",
-                        "DejaVu Sans"], "Sans Serif")
-        display = pick_font(["Geist", "Inter", "SF Pro Display", "SF Pro Text", "Helvetica Neue",
-                             "Segoe UI Variable Display", "Segoe UI", "Inter",
-                             "DejaVu Sans"], ui)
-        mono = pick_font(["SF Mono", "Menlo", "Cascadia Mono", "Consolas",
-                          "DejaVu Sans Mono"], "Monospace")
+        ui = pick_font(ds.UI_FONTS, "Sans Serif")
+        display = pick_font(ds.DISPLAY_FONTS, ui)
+        mono = pick_font(ds.MONO_FONTS, "Monospace")
         self.family, self.display, self.mono_family = ui, display, mono
         # Logik-Zeichen (∧ ∨ ¬ ⊕ ⊨ ⊢ ∀ ∃) fehlen vielen Schriften: in dieser Reihenfolge
         # wird pro Zeichen weitergesucht, bevor Qt selbst irgendeine Schrift nimmt.
@@ -2048,9 +2032,13 @@ class Fonts:
         fam = self.mono_family if mono else (self.display if display else self.family)
         font = QFont(fam, size)
         font.setFamilies([fam] + [n for n in self.fallback if n != fam])
-        font.setWeight(weight)
         if display:
-            font.setLetterSpacing(QFont.PercentageSpacing, 97)
+            font.setWeight(QFont.Light)         # Display-Schrift immer Light (300)
+            font.setLetterSpacing(QFont.PercentageSpacing, 99)
+        else:
+            font.setWeight(QFont.Medium if weight >= QFont.DemiBold else weight)
+            if not mono:
+                font.setLetterSpacing(QFont.AbsoluteSpacing, ds.LETTER_SPACING)
         return font
 
 
@@ -2454,8 +2442,51 @@ def _warm_item(item: ItemVM, px: int):
 # Bausteine
 # ==========================================================================
 
+def paint_orbs(p: QPainter, spots: Sequence[tuple[float, float, float, str]], width: int, height: int):
+    """
+    Weiche Pastell-Orbs als Atmosphäre: (x, y, Radius als Anteil der Breite, Farbe).
+    Sehr geringe Deckkraft, nie als Fläche eines Bedienelements.
+    """
+    p.save()
+    p.setPen(Qt.NoPen)
+    alpha = 0.10 if T["dark"] else 0.42
+    for fx, fy, fr, color in spots:
+        r = fr * width
+        grad = QRadialGradient(QPointF(fx * width, fy * height), r)
+        c = QColor(color)
+        c.setAlphaF(alpha)
+        grad.setColorAt(0.0, c)
+        c.setAlphaF(alpha * 0.45)
+        grad.setColorAt(0.55, c)
+        c.setAlphaF(0.0)
+        grad.setColorAt(1.0, c)
+        p.setBrush(grad)
+        p.drawEllipse(QPointF(fx * width, fy * height), r, r)
+    p.restore()
+
+
+class OrbHost(QWidget):
+    """Seitenfläche (Stylesheet-Hintergrund) mit Orbs hinter dem Kopf bzw. im leeren Zustand."""
+
+    def __init__(self, spots, parent=None, active=lambda: True):
+        super().__init__(parent)
+        self.spots, self.active = spots, active
+
+    def paintEvent(self, event):
+        opt = QStyleOption()
+        opt.initFrom(self)
+        p = QPainter(self)
+        self.style().drawPrimitive(QStyle.PE_Widget, opt, p, self)
+        if self.active():
+            paint_orbs(p, self.spots, self.width(), self.height())
+
+
+ORBS_HEAD = [(0.80, 0.02, 0.22, ds.LAVENDER), (0.93, 0.10, 0.16, ds.PEACH), (0.62, 0.0, 0.13, ds.MINT)]
+ORBS_EMPTY = [(0.5, 0.18, 0.32, ds.SKY), (0.25, 0.30, 0.2, ds.ROSE), (0.78, 0.26, 0.22, ds.MINT)]
+
+
 class Card(QFrame):
-    """Fläche mit runden Ecken und weichem Schatten."""
+    """Weisse Karte: Radius 16, Hairline; beim Überfahren ein ganz leiser Schatten."""
 
     def __init__(self, parent=None, pad: int = 26):
         super().__init__(parent)
@@ -2465,13 +2496,34 @@ class Card(QFrame):
         self.lay.setSpacing(0)
         self.shadow = QGraphicsDropShadowEffect(self)
         self.setGraphicsEffect(self.shadow)
+        self._glow = QVariantAnimation(self)
+        self._glow.setDuration(ds.T_PAGE)
+        self._glow.valueChanged.connect(self._set_glow)
         self.restyle()
 
+    def _set_glow(self, alpha):
+        self.shadow.setColor(QColor(0, 0, 0, int(alpha)))
+
+    def _fade(self, target: int):
+        self._glow.stop()
+        self._glow.setStartValue(float(self.shadow.color().alpha()))
+        self._glow.setEndValue(float(target))
+        self._glow.start()
+
     def restyle(self):
-        self.shadow.setBlurRadius(30)
-        self.shadow.setXOffset(0)
-        self.shadow.setYOffset(4)
-        self.shadow.setColor(QColor(0, 0, 0, T["shadow"] // (3 if T["dark"] else 1)))
+        x, y, blur, _alpha = ds.SHADOW_HOVER
+        self.shadow.setBlurRadius(blur)
+        self.shadow.setXOffset(x)
+        self.shadow.setYOffset(y)
+        self.shadow.setColor(QColor(0, 0, 0, 0))
+
+    def enterEvent(self, event):
+        self._fade(0 if T["dark"] else T["shadow"])
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        self._fade(0)
+        super().leaveEvent(event)
 
 
 class Segmented(QWidget):
@@ -2480,7 +2532,7 @@ class Segmented(QWidget):
     changed = Signal(int)
 
     def __init__(self, options: Sequence[str], value: int = 0,
-                 seg_width: int | None = None, parent=None, pad: int = 30):
+                 seg_width: int | None = None, parent=None, pad: int = 26):
         super().__init__(parent)
         self.options = list(options)
         self.value = value
@@ -2501,14 +2553,14 @@ class Segmented(QWidget):
         p.setRenderHint(QPainter.Antialiasing)
         p.setPen(Qt.NoPen)
         p.setBrush(qcolor("fill2") if not self.enabled else qcolor("fill"))
-        p.drawRoundedRect(QRectF(0, 0, self.width(), self.height()), 0, 0)
+        p.drawRoundedRect(QRectF(0, 0, self.width(), self.height()), self.height() / 2, self.height() / 2)
         p.setFont(self.font_)
         for i, text in enumerate(self.options):
             box = self._box(i)
             if i == self.value:
                 p.setBrush(qcolor("fill") if not self.enabled else qcolor("seg"))
                 p.setPen(Qt.NoPen)
-                p.drawRoundedRect(box, 0, 0)
+                p.drawRoundedRect(box, box.height() / 2, box.height() / 2)
             if not self.enabled:
                 p.setPen(qcolor("ter"))
             else:
@@ -2560,7 +2612,7 @@ class Stepper(QWidget):
         p.setRenderHint(QPainter.Antialiasing)
         p.setPen(Qt.NoPen)
         p.setBrush(qcolor("fill"))
-        p.drawRoundedRect(QRectF(0, 0, self.width(), self.height()), 0, 0)
+        p.drawRoundedRect(QRectF(0, 0, self.width(), self.height()), self.height() / 2, self.height() / 2)
         p.setFont(self.font_)
         p.setPen(qcolor("text"))
         h = self.height()
@@ -2627,6 +2679,8 @@ def pill(text: str, kind: str = "primary", on_click: Callable | None = None,
     btn.setObjectName(kind)
     btn.setCursor(Qt.PointingHandCursor)
     btn.setFixedHeight(30 if small else 38)
+    # Qt rundet nur, wenn der Radius höchstens die halbe Höhe ist (sonst eckig)
+    btn.setStyleSheet(f"border-radius: {15 if small else 19}px;")
     btn.setFont(FONTS.f(11 if small else 12))
     if on_click:
         btn.clicked.connect(on_click)
@@ -2684,10 +2738,11 @@ class Badge(QLabel):
         self.restyle()
 
     def restyle(self):
-        pad = "2px 9px" if self.small else "4px 14px"
+        py, px = (2, 9) if self.small else (4, 14)
+        radius = (QFontMetricsF(self.font()).height() + 2 * py) / 2 - 1       # Pille: halbe Höhe
         self.setStyleSheet(
             f"color: {T[self.fg]}; background: {T[self.bg]};"
-            f"border-radius: 0px; padding: {pad};")
+            f"border-radius: {int(radius)}px; padding: {py}px {px}px;")
 
 
 def restyle_labels(root: QWidget):
@@ -2720,7 +2775,7 @@ class Toast(QFrame):
         lay.addWidget(self.label)
         self.setFixedHeight(self.HEIGHT)
         self.setStyleSheet(
-            f"#toast {{ background: {T['card']}; border-radius: 0px;"
+            f"#toast {{ background: {T['card']}; border-radius: {ds.R_CARD}px;"
             f"border: 1px solid {T['line']}; }}")
         shadow = QGraphicsDropShadowEffect(self)
         shadow.setBlurRadius(26)
@@ -2963,6 +3018,7 @@ class TableView(QWidget):
         p.setRenderHint(QPainter.TextAntialiasing)
         total_w = self.width() - 1
         h = self.row_h
+        p.fillRect(self.rect(), qcolor("card"))
         # Kopf
         p.fillRect(QRectF(0, 0, total_w, h), qcolor("fill"))
         p.setFont(self.head_font)
@@ -3040,8 +3096,8 @@ class ResultView(QScrollArea):
         self.setWidgetResizable(True)
         self.setFrameShape(QFrame.NoFrame)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.host = QWidget()
-        self.host.setObjectName("page")
+        self.host = OrbHost(ORBS_EMPTY, active=lambda: self.vm is None and self.message[0] == "info")
+        self.host.setObjectName("cardbg")
         self.lay = QVBoxLayout(self.host)
         self.lay.setContentsMargins(0, 0, 8, 0)
         self.lay.setSpacing(10)
@@ -3063,8 +3119,11 @@ class ResultView(QScrollArea):
         self._clear()
         self.vm = None
         self.message = ("info", text)
-        self.lay.addWidget(label(text, 12, "ter", wrap=True))
-        self.lay.addStretch(1)
+        self.lay.addStretch(2)
+        lb = label(text, 20, "sec", display=True)
+        lb.setAlignment(Qt.AlignHCenter)
+        self.lay.addWidget(lb)
+        self.lay.addStretch(3)
 
     def placeholder(self, text: str):
         self._placeholder(text)
@@ -3088,7 +3147,7 @@ class ResultView(QScrollArea):
         self.message = ("error", message)
         box = QFrame()
         box.setObjectName("errbox")
-        box.setStyleSheet(f"#errbox {{ background: {T['red_soft']}; border-radius: 0px; }}")
+        box.setStyleSheet(f"#errbox {{ background: {T['red_soft']}; border-radius: {ds.R_INPUT}px; }}")
         bl = QVBoxLayout(box)
         bl.setContentsMargins(16, 13, 16, 13)
         bl.setSpacing(4)
@@ -3128,7 +3187,7 @@ class ResultView(QScrollArea):
         for warning in vm.warnings:
             box = QFrame()
             box.setObjectName("warnbox")
-            box.setStyleSheet(f"#warnbox {{ background: {T['amber_soft']}; border-radius: 0px; }}")
+            box.setStyleSheet(f"#warnbox {{ background: {T['amber_soft']}; border-radius: {ds.R_CARD}px; }}")
             bl = QVBoxLayout(box)
             bl.setContentsMargins(14, 10, 14, 10)
             bl.addWidget(RichLabel(warning, 11, "amber"))
@@ -3144,7 +3203,7 @@ class ResultView(QScrollArea):
     def _step_card(self, step: StepVM) -> QWidget:
         card = QFrame()
         card.setObjectName("stepcard")
-        card.setStyleSheet(f"#stepcard {{ background: {T['fill2']}; border-radius: 0px;"
+        card.setStyleSheet(f"#stepcard {{ background: {T['fill2']}; border-radius: {ds.R_CARD}px;"
                            f"border: 1px solid {T['hair']}; }}")
         lay = QVBoxLayout(card)
         lay.setContentsMargins(16, 13, 16, 13)
@@ -3175,7 +3234,7 @@ class ResultView(QScrollArea):
     def _result_card(self, highlights: "list[ItemVM]") -> QWidget:
         card = QFrame()
         card.setObjectName("rescard")
-        card.setStyleSheet(f"#rescard {{ background: {T['blue_soft']}; border-radius: 0px; }}")
+        card.setStyleSheet(f"#rescard {{ background: {T['blue_soft']}; border-radius: {ds.R_CARD}px; }}")
         lay = QVBoxLayout(card)
         lay.setContentsMargins(16, 13, 16, 14)
         lay.setSpacing(6)
@@ -3721,7 +3780,7 @@ class WolframPanel(QWidget):
             box = QFrame()
             box.setObjectName("wolferr" if level == "bad" else "wolfbusy")
             if level == "bad":
-                box.setStyleSheet(f"#wolferr {{ background: {T['red_soft']}; border-radius: 0px; }}")
+                box.setStyleSheet(f"#wolferr {{ background: {T['red_soft']}; border-radius: {ds.R_CARD}px; }}")
             bl = QVBoxLayout(box)
             bl.setContentsMargins(14, 10, 14, 10)
             bl.addWidget(label(text, 11, color, wrap=True))
@@ -3947,7 +4006,7 @@ class AnimationPane(QWidget):
             self.player.stop()
 
 
-class ToolPage(QWidget):
+class ToolPage(OrbHost):
     """
     Gemeinsames Gerüst der neun Seiten.
 
@@ -3957,7 +4016,7 @@ class ToolPage(QWidget):
     """
 
     def __init__(self, window, key: str, parent=None):
-        super().__init__(parent)
+        super().__init__(ORBS_HEAD, parent)
         self.setObjectName("page")
         self.KEY = key
         self.spec = PAGES[key]
@@ -3979,14 +4038,15 @@ class ToolPage(QWidget):
         self.figure_job_id = 0
 
         outer = QVBoxLayout(self)
-        outer.setContentsMargins(32, 26, 32, 26)
+        outer.setContentsMargins(40, 32, 40, 32)
         outer.setSpacing(0)
-        outer.addWidget(label(self.spec.title, 26, weight=QFont.Bold, display=True))
+        outer.addWidget(label(self.spec.title, 32, display=True))
+        outer.addSpacing(4)
         outer.addWidget(label(self.spec.lede, 13, "sec", display=True, wrap=True))
-        outer.addSpacing(18)
+        outer.addSpacing(24)
 
         columns = QHBoxLayout()
-        columns.setSpacing(20)
+        columns.setSpacing(24)
         outer.addLayout(columns, 1)
 
         # Links: eigene Rolle, damit lange Prüfberichte scrollen, ohne die Ergebniskarte zu dehnen.
@@ -4586,7 +4646,7 @@ class HelpDialog(QDialog):
         for title, example, text in self.SECTIONS:
             box = QFrame()
             box.setObjectName("helpbox")
-            box.setStyleSheet(f"#helpbox {{ background: {T['fill2']}; border-radius: 0px; }}")
+            box.setStyleSheet(f"#helpbox {{ background: {T['fill2']}; border-radius: {ds.R_CARD}px; }}")
             bl = QVBoxLayout(box)
             bl.setContentsMargins(16, 13, 16, 13)
             bl.setSpacing(4)
@@ -4668,55 +4728,58 @@ class MainWindow(QMainWindow):
         sheet = f"""
         QWidget {{ color: {T['text']}; }}
         QMainWindow, #page, QStackedWidget {{ background: {T['bg']}; }}
+        #cardbg {{ background: {T['card']}; }}
         QScrollArea {{ background: transparent; }}
         #nav {{ background: {T['nav']}; }}
-        #card {{ background: {T['card']}; border-radius: 0px;
-                 border: {'0px' if T['dark'] else '1px'} solid {T['hair']}; }}
-        QPushButton#primary {{ background: {T['blue']}; color: #ffffff;
-            border: none; border-radius: 0px; padding: 0 22px; }}
+        #card {{ background: {T['card']}; border-radius: {ds.R_CARD}px;
+                 border: 1px solid {T['hair']}; }}
+        QPushButton#primary {{ background: {T['blue']}; color: {T['on_blue']};
+            border: none; padding: 0 22px; }}
         QPushButton#primary:hover {{ background: {T['blue_hi']}; }}
+        QPushButton#primary:pressed {{ background: {T['blue_hi']}; padding-top: 1px; }}
         QPushButton#primary:disabled {{ background: {T['fill']};
             color: {T['ter']}; }}
-        QPushButton#secondary {{ background: {T['fill']}; color: {T['text']};
-            border: none; border-radius: 0px; padding: 0 18px; }}
-        QPushButton#secondary:hover {{ background: {T['line']}; }}
-        QPushButton#secondary:disabled {{ color: {T['ter']}; }}
-        QPushButton#plain {{ background: transparent; color: {T['blue']};
-            border: none; padding: 0 10px; }}
-        QPushButton#plain:hover {{ text-decoration: underline; }}
+        QPushButton#secondary {{ background: transparent; color: {T['text']};
+            border: 1px solid {T['line']}; padding: 0 18px; }}
+        QPushButton#secondary:hover {{ background: {T['fill']}; }}
+        QPushButton#secondary:pressed {{ background: {T['hair']}; }}
+        QPushButton#secondary:disabled {{ color: {T['ter']}; border-color: {T['hair']}; }}
+        QPushButton#plain {{ background: transparent; color: {T['text']};
+            border: none; padding: 0 12px; }}
+        QPushButton#plain:hover {{ background: {T['fill']}; }}
         QPushButton#plain:disabled {{ color: {T['ter']}; }}
-        QPushButton#dropdown {{ background: {T['fill']}; color: {T['text']};
-            border: none; border-radius: 0px; padding: 0 10px; text-align: left; }}
-        QPushButton#dropdown:hover {{ background: {T['line']}; }}
+        QPushButton#dropdown {{ background: {T['card']}; color: {T['text']};
+            border: 1px solid {T['line']}; border-radius: {ds.R_INPUT}px; padding: 0 10px; text-align: left; }}
+        QPushButton#dropdown:hover {{ background: {T['fill']}; }}
         QPushButton#dropdown:disabled {{ color: {T['ter']}; }}
         QLineEdit#cell, QPlainTextEdit#cell {{ background: {T['entry']}; color: {T['text']};
-            border: 1px solid {T['line']}; border-radius: 0px; padding: 0 10px;
-            selection-background-color: {T['blue']}; }}
+            border: 1px solid {T['line']}; border-radius: {ds.R_INPUT}px; padding: 0 10px;
+            selection-background-color: {T['hi_soft']}; selection-color: {T['text']}; }}
         QLineEdit#cell:focus, QPlainTextEdit#cell:focus {{ border: 2px solid {T['blue']}; }}
         QMenu {{ background: {T['card']}; color: {T['text']};
-            border: 1px solid {T['line']}; border-radius: 0px; padding: 5px; }}
-        QMenu::item {{ padding: 6px 22px; border-radius: 0px; }}
-        QMenu::item:selected {{ background: {T['blue']}; color: #ffffff; }}
-        QMenu::separator {{ height: 1px; background: {T['line']}; margin: 4px 8px; }}
+            border: 1px solid {T['hair']}; border-radius: {ds.R_INPUT}px; padding: 5px; }}
+        QMenu::item {{ padding: 6px 22px; border-radius: 6px; }}
+        QMenu::item:selected {{ background: {T['fill']}; color: {T['text']}; }}
+        QMenu::separator {{ height: 1px; background: {T['hair']}; margin: 4px 8px; }}
         QToolTip {{ background: {T['card']}; color: {T['text']};
-            border: 1px solid {T['line']}; padding: 4px 8px; }}
+            border: 1px solid {T['hair']}; padding: 4px 8px; }}
         QScrollBar:vertical {{ background: transparent; width: 12px; margin: 2px; }}
         QScrollBar::handle:vertical {{ background: {T['scroll']};
-            border-radius: 0px; min-height: 40px; }}
+            border-radius: 4px; min-height: 40px; }}
         QScrollBar::handle:vertical:hover {{ background: {T['ter']}; }}
         QScrollBar::add-line, QScrollBar::sub-line {{ height: 0; width: 0; }}
         QScrollBar::add-page, QScrollBar::sub-page {{ background: transparent; }}
         QScrollBar:horizontal {{ background: transparent; height: 12px; margin: 2px; }}
         QScrollBar::handle:horizontal {{ background: {T['scroll']};
-            border-radius: 0px; min-width: 40px; }}
+            border-radius: 4px; min-width: 40px; }}
         QDialog {{ background: {T['card']}; }}
         QProgressBar#progress {{ background: {T['fill']}; border: none;
-            border-radius: 0px; }}
+            border-radius: 3px; }}
         QProgressBar#progress::chunk {{ background: {T['blue']};
-            border-radius: 0px; }}
+            border-radius: 3px; }}
         """
         self.setStyleSheet(sheet)
-        self.hairline.setStyleSheet(f"background: {T['line']};")
+        self.hairline.setStyleSheet(f"background: {T['hair']};")
         for page in getattr(self, "pages", []):
             page.restyle()
         restyle_labels(self)
@@ -4729,8 +4792,22 @@ class MainWindow(QMainWindow):
             widget.update()
 
     def set_page(self, index: int):
+        changed = index != self.stack.currentIndex()
         self.stack.setCurrentIndex(index)
         self.seg_page.set_value(index)
+        if changed and QApplication.platformName() != "offscreen":
+            self._fade_in(self.pages[index])
+
+    def _fade_in(self, page: QWidget):
+        """Seitenwechsel: kurzes, sanftes Einblenden (nur sichtbar, solange es läuft)."""
+        effect = QGraphicsOpacityEffect(page)
+        page.setGraphicsEffect(effect)
+        anim = QPropertyAnimation(effect, b"opacity", page)
+        anim.setDuration(ds.T_PAGE)
+        anim.setStartValue(0.0)
+        anim.setEndValue(1.0)
+        anim.finished.connect(lambda: page.setGraphicsEffect(None))
+        anim.start(QPropertyAnimation.DeleteWhenStopped)
 
     @property
     def page(self) -> ToolPage:
