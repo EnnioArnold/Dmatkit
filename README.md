@@ -34,7 +34,7 @@ pip install manimgx                  # Animationen, freiwillig (Python 3.13+)
 
 manimgx rendert auf der GPU und schreibt das MP4 ohne ffmpeg. Als Rückfall
 geht Manim CE (`brew install cairo pango pkg-config ffmpeg`, `pip install manim`).
-Die Videos kommen im Swiss-Design: Schwarz/Weiss mit rotem Akzent. Beispiel:
+Die Videos kommen im Look der App: heller Canvas, Tinte, weiche Pastell-Orbs. Beispiel:
 `python3 -m dmatkit.grafik.anim 409` rendert die Umwandlung 409 → Binär.
 
 Der Ordner `dmatkit/` liegt neben deinen Wochen-Ordnern. Aus einem Notebook in
@@ -126,6 +126,22 @@ def meine_dec_to_bin(n):
 
 pruefe_dec_to_bin(meine_dec_to_bin)
 ```
+
+## Design
+
+App, Zeichnungen und Animationen teilen sich ein Design, das `design.py` zentral
+festlegt (Farben, Radien, Schriften, Abstände). Vorlage ist eine unabhängige Analyse
+des ElevenLabs-Designsystems (Quelle: getdesign.md, DESIGN.md), keine Kopie.
+
+- Heller Off-White-Canvas `#f5f5f5`, warme Tinte `#292524`, weisse Karten mit 1px Hairline
+  und Radius 16, Pillen-Buttons (primär Tinte, sekundär Outline), Eingaben mit Radius 8.
+- Keine gesättigte Akzentfarbe. Pastell-Orbs (mint, peach, lavender, sky, rose) sind nur
+  Atmosphäre hinter Seitenkopf und leeren Zuständen. Wahr/Falsch und die Markierungen
+  im Rechenweg bleiben grün/rot, gedämpft als Flächen.
+- Dunkel: Tinten-Canvas `#0c0a09` mit Karten in `#1c1917`.
+- Schriften: Inter für die Oberfläche, EB Garamond Light als Ersatz für die Display-Schrift
+  Waldenburg, Monospace für Code. Es liegen keine Schriftdateien im Repo; fehlt eine
+  Schrift, greift ein Rückfall (System-Sans, Georgia/Times).
 
 ## Das Fenster
 
