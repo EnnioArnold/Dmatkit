@@ -43,6 +43,7 @@ import mpmath as mp
 import numpy as np
 import sympy as sp
 
+from .. import design as ds
 from ..rechnen.core import (Const, Formula, Var, assignments, big_and, bit,
                             entails, parse)
 
@@ -52,11 +53,12 @@ __all__ = [
     "plot_steps", "plot_halving", "plot_recursion_tree", "has_plotly", "plotly_growth", "COLORS",
 ]
 
-# Swiss Style wie die App: Schwarz/Weiss, ein Rot (#e60000), Grautöne.
-INK = "#000000"
-RED = "#e60000"
-GREY = "#666666"
-COLORS = [INK, RED, GREY, "#999999", "#333333", "#b30000"]
+# Farben kommen zentral aus design.py (ElevenLabs-inspiriert): Tinte, Hairline-Gitter,
+# Pastell für Flächen. accent = Tinte; red/good tragen Bedeutung (falsch/wahr).
+INK = ds.INK
+RED = ds.ERROR_FILL
+GREY = ds.MUTED
+COLORS = list(ds.PLOT_LIGHT["series"])
 
 MAX_PLOT_VARS = 6          # 2^6 = 64 Tabellenzeilen passen noch gut aufs Blatt
 MAX_TREE_NODES = 300
@@ -70,17 +72,10 @@ MAX_MATRIX = 30
 MAX_BITS = 64
 MAX_TIME = 8.0             # Sekunden Rechenzeit für eine Wachstumszeichnung
 
-_LIGHT = dict(
-    dark=False, bg="#ffffff", fg="#000000", muted="#666666", grid="#e0e0e0",
-    red="#e60000", soft="#f0f0f0", tint="#fdeaea", good="#1f8a4c",
-    on_color="#ffffff", series=COLORS)
-_DARK = dict(
-    dark=True, bg="#000000", fg="#ffffff", muted="#999999", grid="#2a2a2a",
-    red="#ff3333", soft="#1c1c1c", tint="#2e1010", good="#2fb36a",
-    on_color="#000000", series=["#ffffff", "#ff3333", "#aaaaaa", "#777777",
-                                "#dddddd", "#cc0000"])
+_LIGHT = dict(ds.PLOT_LIGHT)
+_DARK = dict(ds.PLOT_DARK)
 
-_FONT_WISH = ["Helvetica Neue", "Helvetica", "Arial", "Liberation Sans", "DejaVu Sans"]
+_FONT_WISH = list(ds.UI_FONTS) + ["Helvetica Neue", "Helvetica", "Arial", "Liberation Sans", "DejaVu Sans"]
 _STYLES = ["-", "--", "-.", ":"]
 
 
@@ -93,7 +88,7 @@ def _fonts() -> tuple:
     """Nur Schriften, die es gibt (sonst meldet Matplotlib bei jedem Text eine Warnung)."""
     from matplotlib import font_manager
     have = {f.name for f in font_manager.fontManager.ttflist}
-    out = [f for f in _FONT_WISH if f in have]
+    out = [f for f in dict.fromkeys(_FONT_WISH) if f in have]
     if "DejaVu Sans" not in out:
         out.append("DejaVu Sans")      # liegt Matplotlib bei und kennt ¬ ∧ ∨ ⊕ → ↔ □ ⊨
     return tuple(out)
@@ -109,8 +104,8 @@ def _rc(th: dict) -> dict:
         "axes.unicode_minus": True, "figure.facecolor": th["bg"],
         "axes.facecolor": th["bg"], "savefig.facecolor": th["bg"],
         "text.color": th["fg"], "axes.labelcolor": th["fg"],
-        "axes.edgecolor": th["fg"], "xtick.color": th["fg"], "ytick.color": th["fg"],
-        "grid.color": th["grid"], "grid.linewidth": 0.6,
+        "axes.edgecolor": th["muted"], "xtick.color": th["fg"], "ytick.color": th["fg"],
+        "grid.color": th["grid"], "grid.linewidth": 0.8,
         "lines.solid_capstyle": "butt", "lines.dash_capstyle": "butt",
         "legend.frameon": False, "legend.facecolor": th["bg"],
         "axes.formatter.use_mathtext": False, "figure.dpi": 100,
@@ -401,7 +396,7 @@ def _table(sh: _Sheet, x: float, y: float, headers, rows, *, fs=11, row_h=0.31, 
     for j in vsep:
         sh.line(cx[j], y, cx[j], bottom, color=th["muted"], lw=0.7)
     for j in box_cols:
-        sh.rect(cx[j], y, cw[j], bottom - y, edge=th["red"], lw=1.6, z=4)
+        sh.rect(cx[j], y, cw[j], bottom - y, edge=th["accent"], lw=1.6, z=4)
     for j in range(ncol):
         sh.text(cx[j] + cw[j] / 2, y + head_h / 2, headers[j], fs, head_color.get(j), "bold")
     for i, r in enumerate(rows):
@@ -548,9 +543,9 @@ def plot_syntax_tree(tree, *, dark: bool = False, figsize=None, title=None):
         for n in nodes:
             leaf = not n.kids
             is_root = n is root
-            edge = th["red"] if is_root else th["fg"]
+            edge = th["accent"] if is_root else th["fg"]
             lw = 2.0 if is_root else (1.0 if leaf else 1.3)
-            fill = th["soft"] if leaf else th["bg"]
+            fill = th["tint"] if leaf else th["bg"]
             if n.round:
                 sh.circle(n.x, n.y, n.w / 2, fill=fill, edge=edge, lw=lw)
             else:
@@ -601,7 +596,7 @@ def plot_truth_table(f, names=None, *, dark: bool = False, figsize=None, title=N
         sh = _Sheet(th)
         ones = [i for i, r in enumerate(rows) if r[res] == "1"]
         tab = _table(sh, 0, 0, headers, rows,
-                     head_fill={res: th["red"]}, head_color={res: th["on_color"]},
+                     head_fill={res: th["accent"]}, head_color={res: th["on_color"]},
                      row_fill={i: th["tint"] for i in ones}, bold_cols={res},
                      vsep={len(vars_)} if vars_ else (), box_cols={res})
         n = len(rows)
@@ -635,7 +630,7 @@ def plot_connectives(*, dark: bool = False, figsize=None, title=None):
             head = max(sh.w(name, 10, "bold"), 0)
             sh.text(x, 0.12, name, 10, th["muted"], "bold", ha="left")
             tab = _table(sh, x, 0.32, vars_ + [f.to_str()], rows,
-                         head_fill={res: th["red"]}, head_color={res: th["on_color"]},
+                         head_fill={res: th["accent"]}, head_color={res: th["on_color"]},
                          row_fill={i: th["tint"] for i, r in enumerate(rows) if r[res] == "1"},
                          bold_cols={res}, vsep={res}, min_w=0.55)
             width = max(tab["w"], head)
@@ -691,7 +686,7 @@ def plot_entailment(wb, q, *, dark: bool = False, figsize=None, title=None):
         row_fill.update({i: th["red"] for i in bad})
         cell_color = {(i, j): th["on_color"] for i in bad for j in range(len(rows[0]))}
         tab = _table(sh, 0, 0, vars_ + ["WB", "Q", "WB ⊨ Q?"], rows,
-                     head_fill={cW: th["fg"], cQ: th["red"]},
+                     head_fill={cW: th["fg"], cQ: th["accent"]},
                      head_color={cW: th["bg"], cQ: th["on_color"]},
                      row_fill=row_fill, cell_color=cell_color, bold_cols={cW, cQ, cU},
                      vsep={cW})
@@ -866,7 +861,7 @@ def plot_resolution(graph, *, dark: bool = False, figsize=None, title=None):
                 sh.text(n["x"], n["y"], "□", 18, th["on_color"], "bold")
             else:
                 fill = {"kb": th["bg"], "query": th["tint"], "res": th["soft"]}[n["kind"]]
-                edge = th["red"] if n["kind"] == "query" else th["fg"]
+                edge = th["accent"] if n["kind"] == "query" else th["fg"]
                 sh.rect(x0, y0, n["w"], n["h"], fill=fill, edge=edge,
                         lw=1.8 if n["kind"] == "query" else 1.1, z=2)
                 top_y = n["y"] - 0.095 * (len(n["lines"]) - 1)
@@ -878,7 +873,7 @@ def plot_resolution(graph, *, dark: bool = False, figsize=None, title=None):
         ly = height + 0.55
         lx = 0.0
         kinds = [("kb", "Wissensbasis", th["bg"], th["fg"]),
-                 ("query", "Negierte Anfrage", th["tint"], th["red"]),
+                 ("query", "Negierte Anfrage", th["tint"], th["accent"]),
                  ("res", "Resolvent", th["soft"], th["fg"])]
         for key, name, fill, edge in kinds:
             if any(n["kind"] == key for n in nodes):
@@ -886,7 +881,7 @@ def plot_resolution(graph, *, dark: bool = False, figsize=None, title=None):
                 sh.text(lx + 0.4, ly, name, 9, th["muted"], ha="left")
                 lx += 0.55 + sh.w(name, 9)
         if any(n["empty"] for n in nodes):
-            sh.rect(lx, ly - 0.09, 0.3, 0.18, fill=th["red"], edge=th["red"], lw=1.2)
+            sh.rect(lx, ly - 0.09, 0.3, 0.18, fill=th["accent"], edge=th["accent"], lw=1.2)
             sh.text(lx + 0.4, ly, "leere Klausel □", 9, th["muted"], ha="left")
             lx += 0.55 + sh.w("leere Klausel □", 9)
         cw = max(xmax - xmin, lx)
@@ -981,18 +976,18 @@ def plot_bits(value, width: int = 8, signed: bool = False, *, dark: bool = False
                 neg = signed and i == 0
                 sh.text(xs[i] + cwid / 2, oy + 0.16, ("−" if neg else "") + "2" + _sup(k), 9.5, th["muted"])
                 sh.text(xs[i] + cwid / 2, oy + 0.48, ("−" if neg else "") + _group(1 << k), 10.5,
-                        th["red"] if neg else th["fg"], "bold" if neg else "normal")
+                        th["accent"] if neg else th["fg"], "bold" if neg else "normal")
                 if bits[i]:
-                    fill = th["red"] if neg else th["fg"]
+                    fill = th["accent"] if neg else th["fg"]
                     sh.rect(xs[i] + 0.03, oy + 0.68, cwid - 0.06, 0.68, fill=fill, z=1)
                     sh.text(xs[i] + cwid / 2, oy + 1.02, "1", 17, th["on_color"] if neg else th["bg"], "bold")
                 else:
-                    sh.rect(xs[i] + 0.03, oy + 0.68, cwid - 0.06, 0.68, edge=th["red"] if neg else th["grid"],
+                    sh.rect(xs[i] + 0.03, oy + 0.68, cwid - 0.06, 0.68, edge=th["accent"] if neg else th["grid"],
                             lw=1.4 if neg else 0.9, z=1)
                     sh.text(xs[i] + cwid / 2, oy + 1.02, "0", 17, th["muted"])
             sh.line(labw, oy + 0.68, x, oy + 0.68, lw=0.9)
             if signed and blk == 0:
-                sh.text(xs[0] + cwid / 2, oy + 1.5, "Vorzeichen", 8.5, th["red"], "bold")
+                sh.text(xs[0] + cwid / 2, oy + 1.5, "Vorzeichen", 8.5, th["accent"], "bold")
         # Summe
         terms = [w_ for w_, b in zip(weights, bits) if b]
         if terms:
@@ -1604,9 +1599,9 @@ def plot_growth(funcs, n_max=None, log: bool = False, mark_limit=None, *, dark: 
                         color=th["muted"])
         if limit is not None:
             ly = math.log10(limit) if log else limit
-            ax.axhline(ly, color=th["red"], linewidth=1.3, linestyle="--", zorder=2)
+            ax.axhline(ly, color=th["accent"], linewidth=1.3, linestyle="--", zorder=2)
             ax.text(0.005, ly, f" Limit {_sci(limit)} Schritte", transform=ax.get_yaxis_transform(),
-                    ha="left", va="bottom", fontsize=9, color=th["red"])
+                    ha="left", va="bottom", fontsize=9, color=th["accent"])
             for i, f in enumerate(fns):
                 n_star = maxes[i][0]
                 if 1 <= n_star <= n_max:
@@ -1617,7 +1612,7 @@ def plot_growth(funcs, n_max=None, log: bool = False, mark_limit=None, *, dark: 
                         color = series[i % len(series)]
                         ax.plot([n_star, n_star], [ax.get_ylim()[0], yv], color=color,
                                 linewidth=0.8, linestyle=":", zorder=2)
-                        ax.scatter([n_star], [yv], s=42, color=color, edgecolor=th["red"],
+                        ax.scatter([n_star], [yv], s=42, color=color, edgecolor=th["accent"],
                                    linewidth=1.4, zorder=5)
         fig.legend(*ax.get_legend_handles_labels(), loc="outside right upper", fontsize=9.5)
         ax.set_title(_esc("Wachstum der Rechenschritte" if title is None else title),
@@ -1630,7 +1625,10 @@ def _axes_style(ax, th):
     ax.set_axisbelow(True)
     for side in ("top", "right"):
         ax.spines[side].set_visible(False)
-    ax.tick_params(length=3)
+    for side in ("left", "bottom"):
+        ax.spines[side].set_color(th["muted"])
+        ax.spines[side].set_linewidth(0.8)
+    ax.tick_params(length=3, colors=th["muted"], labelcolor=th["fg"])
 
 
 def plot_steps(ns, steps, fit=None, *, log: bool = False, dark: bool = False, figsize=None,
@@ -1670,7 +1668,7 @@ def plot_steps(ns, steps, fit=None, *, log: bool = False, dark: bool = False, fi
             gv = np.where(np.isfinite(gv), gv, np.nan)
             if not np.isfinite(gv).any():
                 raise ValueError("Die Anpassung lässt sich für diese n nicht auswerten")
-            ax.plot(grid, gv, color=th["red"], linewidth=2.0, zorder=2,
+            ax.plot(grid, gv, color=th["accent"], linewidth=2.0, zorder=2,
                     label="Anpassung  f(n) = " + fn.label)
         ax.scatter(xs, ys, s=38, marker="s", color=th["fg"], zorder=4, label="Messung")
         ax.set_xlim(lo - 0.05 * span, hi + 0.05 * span)
@@ -1718,7 +1716,7 @@ def plot_halving(x, *, dark: bool = False, figsize=None, title=None):
         _axes_style(ax, th)
         pos = np.arange(1, k + 1)
         bars = ax.bar(pos, [float(v) for v in seq], width=0.68, color=th["fg"], zorder=3)
-        bars[-1].set_color(th["red"])
+        bars[-1].set_color(th["accent"])
         top = float(max(seq))
         for p, v in zip(pos, seq):
             ax.text(p, v + top * 0.015, _sci(v) if v >= 10 ** 7 else str(v), ha="center",
@@ -1791,7 +1789,7 @@ def plot_tiling(grid, hole=None, *, dark: bool = False, figsize=None, title=None
             for c in range(size):
                 t = grid[r][c]
                 free = (hole is not None and (r, c) == tuple(hole)) or t == 0
-                ax.add_patch(Rectangle((c, size - 1 - r), 1, 1, facecolor=th["red"] if free else shades[int(t) % 3],
+                ax.add_patch(Rectangle((c, size - 1 - r), 1, 1, facecolor=th["accent"] if free else shades[int(t) % 3],
                                        edgecolor=th["bg"], linewidth=0.6))
         for r in range(size):                                        # dicke Linien zwischen verschiedenen Fliesen
             for c in range(size):
@@ -1866,19 +1864,19 @@ def plotly_growth(funcs, n_max=None, log: bool = False, mark_limit=None, *, dark
         ticks = list(range(lo, top + 1, step))
         yaxis.update(tickvals=ticks, ticktext=[_tick_pow10(t) for t in ticks])
     if limit is not None:
-        fig.add_hline(y=math.log10(limit) if log else limit, line=dict(color=th["red"], dash="dash"),
+        fig.add_hline(y=math.log10(limit) if log else limit, line=dict(color=th["accent"], dash="dash"),
                       annotation_text=f"Limit {_sci(limit)}")
         for i, f in enumerate(fns):
             n_star = maxes[i][0]
             if 1 <= n_star <= n_max:
                 v, lg = f(n_star)
                 fig.add_trace(go.Scatter(x=[n_star], y=[lg if log else v], mode="markers",
-                                         showlegend=False, marker=dict(size=10, color=th["red"]),
+                                         showlegend=False, marker=dict(size=10, color=th["accent"]),
                                          hovertemplate=f"größtes n = {n_star}<extra></extra>"))
     fig.update_layout(
         title="Wachstum der Rechenschritte" if title is None else title,
         template="plotly_dark" if dark else "simple_white", paper_bgcolor=th["bg"],
-        plot_bgcolor=th["bg"], font=dict(family="Helvetica Neue, Helvetica, Arial, sans-serif",
+        plot_bgcolor=th["bg"], font=dict(family="Inter, Helvetica Neue, Helvetica, Arial, sans-serif",
                                          color=th["fg"]),
         xaxis=dict(title="n  (Eingabegrösse)", **axis), yaxis=yaxis, height=520,
         margin=dict(l=10, r=10, t=50, b=10))

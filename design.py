@@ -33,6 +33,7 @@ ORBS = (MINT, PEACH, LAVENDER, SKY, ROSE)
 # Bedeutung: Wahr/Falsch. Textton etwas dunkler als der Ton der Vorlage,
 # damit er auf der Pastellfläche genug Kontrast hat (>= 4.5:1).
 SUCCESS, ERROR = "#16a34a", "#dc2626"
+SUCCESS_FILL, ERROR_FILL = "#15803d", "#b91c1c"     # Flächen mit weisser Schrift (Kontrast >= 4.5:1)
 
 # --- Radien, Abstände, Zeiten --------------------------------------------
 R_CARD, R_INPUT, R_PILL = 16, 8, 20      # Pille: mind. halbe Höhe (Qt kennt kein 999px)
@@ -68,12 +69,12 @@ APP_DARK = dict(
 # --- Zeichnungen (Matplotlib) ---------------------------------------------
 # accent = Tinte (keine Signalfarbe); red/good tragen Bedeutung (falsch/wahr).
 PLOT_LIGHT = dict(
-    dark=False, bg=CARD, fg=INK, muted=MUTED, grid=HAIRLINE, accent=INK, red=ERROR,
-    soft=SURFACE, tint="#e3f4ee", good=SUCCESS, on_color="#ffffff",
+    dark=False, bg=CARD, fg=INK, muted=MUTED, grid=HAIRLINE, accent=INK, red=ERROR_FILL,
+    soft=SURFACE, tint="#e3f4ee", good=SUCCESS_FILL, on_color="#ffffff",
     series=[INK, "#5b87b5", "#c27a52", "#4f9c82", "#8e7bb5", "#b5707f"])
 PLOT_DARK = dict(
     dark=True, bg=DARK_CARD, fg="#fafaf9", muted=MUTED_SOFT, grid="#2e2a27",
-    accent="#fafaf9", red="#f87171", soft="#292524", tint="#1f3a33", good="#4ade80",
+    accent="#fafaf9", red="#e0807a", soft="#292524", tint="#1f3a33", good="#5eb98a",
     on_color=INK_DEEP,
     series=["#fafaf9", "#8fb4dc", "#e2a07c", "#7fcfb4", "#b9a6dc", "#dc9aa8"])
 
