@@ -2,9 +2,9 @@
 
 Diskrete Mathematik mit nachvollziehbarem Rechenweg, gebaut zum Modul
 DMATH-ALGO der HSLU (Diskrete Mathematik für Datenstrukturen und Algorithmen).
-Deckt die Semesterwochen 1 bis 8 ab: Elementare Datentypen, Aussagenlogik,
+Deckt die Semesterwochen 1 bis 9 ab: Elementare Datentypen, Aussagenlogik,
 Prädikatenlogik, Beweiskalkül, Analyse von Algorithmen, rekursive Algorithmen,
-mathematische Induktion und Zähltechniken. Schwesterprojekt von
+mathematische Induktion, Zähltechniken und komplexere Zähltechniken. Schwesterprojekt von
 [lialkit](https://github.com/EnnioArnold/lialkit) (Lineare Algebra) und
 [anakit](https://github.com/EnnioArnold/Analysiskit) (Analysis).
 
@@ -57,6 +57,9 @@ dk.max_input_size("n**2", time_limit_s=60)                   # SW5: grösstes n 
 dk.recursion_tree("mergeSort", [4, 6, 5, 1, 7, 4, 3, 1])     # SW6: Rekursionsbaum
 dk.master_theorem(2, 2, 1)                                   # SW6: T(n) = 2T(n/2) + n  ->  Θ(n log n)
 dk.solve_recurrence([6, -9], 0, {0: 1, 1: 6})                # SW6: T(n) = 6T(n−1) − 9T(n−2)  ->  (1 + n)·3ⁿ
+dk.count_divisible(100000, [2, 3, 5, 7])                     # SW9: Inklusion und Exklusion  ->  77143
+dk.count_recursive("stairs", 10)                             # SW9: Treppe mit 10 Stufen, s(n) = s(n−1) + s(n−2)  ->  89
+dk.gf_coins([1, 2, 5], 15, ordered=True)                     # SW9: erzeugende Funktion  ->  1843 Folgen
 ```
 
 Formeln schreibst du wie im Unterricht: `and or not xor -> <->` oder mit
@@ -81,8 +84,9 @@ rechnen/    Rechenkern: core (Formelbaum, Parser), render (Rechenweg, Tabellen)
               rekursion      SW6  Rekursionsbaum, Hanoi, Master-Satz, lineare Rekursionen
               induktion      SW7  schwache und starke Induktion, Parkettierung, Münzen, quickSort
               zaehlen        SW8  Summen-, Produkt-, Zuordnungsregel, sechs Zählprobleme, IPv4-Teilnetz
+              zaehlkomplex   SW9  Inklusion und Exklusion, Zählen mit Rekursion, erzeugende Funktionen
 grafik/     Zeichnungen (plots)
-aufgaben/   Übungsaufgaben der Serien 1–8 (exercises), Prüfstände zum Selbstprogrammieren (uebung)
+aufgaben/   Übungsaufgaben der Serien 1–9 (exercises), Prüfstände zum Selbstprogrammieren (uebung)
 docs/       Architektur-Diagramm
 tests/      ein Testskript je Modul
 ```
@@ -131,7 +135,7 @@ pip install -r requirements.txt  # einmalig
 python3 app/dmatkit_qt.py
 ```
 
-Acht Seiten, eine je Semesterwoche. Jedes Ergebnis zeigt **Rechenweg** und
+Neun Seiten, eine je Semesterwoche. Jedes Ergebnis zeigt **Rechenweg** und
 **Zeichnung**. Die Prüfung über Wolfram|Alpha ist optional und braucht eine
 kostenlose AppID von <https://developer.wolframalpha.com/> (Umgebungsvariable
 `WOLFRAM_APPID` oder einmalige Eingabe in der App).
@@ -143,14 +147,15 @@ Dunkelmodus ein, `plotly_growth` öffnet Wachstumskurven interaktiv.
 
 ```bash
 python3 tests/tests_datentypen.py     # ebenso aussagenlogik, praedikate, kalkuel,
-python3 tests/tests_algorithmen.py    # algorithmen, rekursion, induktion, zaehlen, plots, exercises, uebung, app
+python3 tests/tests_algorithmen.py    # algorithmen, rekursion, induktion, zaehlen, zaehlkomplex, plots, exercises, uebung, app
 ```
 
 ## Noch nicht enthalten
 
-SW9 bis SW12 (Relationen, Graphentheorie und weitere Zähltechniken) sind noch nicht behandelt. Der Aufbau ist darauf
+SW10 bis SW12 (Relationen, Graphentheorie und weitere Themen) sind noch nicht behandelt. Der Aufbau ist darauf
 ausgelegt: ein neues Modul in `rechnen/`, seine Namen in `__init__.py`, ein Testskript.
 
-Zu SW7 und SW8 enthalten die Unterlagen nur die Aufgabenstellungen. Die Lösungen sind eigene Rechnungen
+Zu SW7 bis SW9 enthalten die Unterlagen nur die Aufgabenstellungen. Die Lösungen sind eigene Rechnungen
 (in `exercises` als »Lösung eigen« gekennzeichnet) und gegen unabhängige Python-Rechnungen geprüft; Unklares steht als TODO
-in den Docstrings von `rechnen/induktion.py` und `rechnen/zaehlen.py`.
+in den Docstrings von `rechnen/induktion.py`, `rechnen/zaehlen.py` und `rechnen/zaehlkomplex.py`
+(SW9: Länge n in Aufgabe 8 nicht genannt, darum Parameter; Deutung von »Inklusion« und »Exklusion« nach Seite 3 der Serie).
