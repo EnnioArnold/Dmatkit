@@ -137,11 +137,14 @@ des ElevenLabs-Designsystems (Quelle: getdesign.md, DESIGN.md), keine Kopie.
   und Radius 16, Pillen-Buttons (primär Tinte, sekundär Outline), Eingaben mit Radius 8.
 - Keine gesättigte Akzentfarbe. Pastell-Orbs (mint, peach, lavender, sky, rose) sind nur
   Atmosphäre hinter Seitenkopf und leeren Zuständen. Wahr/Falsch und die Markierungen
-  im Rechenweg bleiben grün/rot, gedämpft als Flächen.
+  im Rechenweg bleiben grün/rot, gedämpft als Flächen. Für Text und Flächen mit weisser
+  Schrift nutzt das Kit `#15803d`/`#b91c1c` statt `#16a34a`/`#dc2626`: die helleren Töne der
+  Vorlage erreichen auf Weiss/Pastell nur etwa 3.3:1, die dunkleren über 4.5:1.
 - Dunkel: Tinten-Canvas `#0c0a09` mit Karten in `#1c1917`.
 - Schriften: Inter für die Oberfläche, EB Garamond Light als Ersatz für die Display-Schrift
   Waldenburg, Monospace für Code. Es liegen keine Schriftdateien im Repo; fehlt eine
-  Schrift, greift ein Rückfall (System-Sans, Georgia/Times).
+  Schrift, greift ein Rückfall (System-Sans, Georgia/Times). Inter und EB Garamond (Light)
+  liegen für Qt, Matplotlib und Manim als System-Schrift vor, etwa in `~/Library/Fonts`.
 
 ## Das Fenster
 
