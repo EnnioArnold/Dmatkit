@@ -3,7 +3,7 @@
 Tests für dmatkit_qt (Fenster ohne Bildschirm): python3 tests/tests_app.py
 
 Läuft mit QT_QPA_PLATFORM=offscreen, braucht kein Netz. Legt Bilder der
-acht Seiten (hell und dunkel, Tabellen, Syntaxbaum …) in tests/shots/ ab
+neun Seiten (hell und dunkel, Tabellen, Syntaxbaum …) in tests/shots/ ab
 (oder dort, wo DMATKIT_SHOTS hinzeigt).
 """
 import os
@@ -128,6 +128,11 @@ raises_input("zaehlen", dict(action="fund", fk="comb", fn="3", fk2="5", fr="nein
 raises_input("zaehlen", dict(action="grid", gr="6", gu="4", gv="9, 9"), "")
 raises_input("zaehlen", dict(action="ip", ipc="1.2.3.4"), "")
 raises_input("zaehlen", dict(action="bits", bn="8", bk="9", bm="genau"), "höchstens")
+raises_input("zaehlkomplex", dict(action="ie", im="1, x; 2"), "keine ganze Zahl")
+raises_input("zaehlkomplex", dict(action="ie", im=""), "eingeben")
+raises_input("zaehlkomplex", dict(action="div", dl="100", dd="0, 2"), "Werte")
+raises_input("zaehlkomplex", dict(action="gf", gm="1..6; 1..6", gt="x"), "ganze Zahl")
+raises_input("zaehlkomplex", dict(action="coins", cm="", ct="15", co="nein"), "eingeben")
 raises_input("rekursion", dict(action="linrec", lc="0, -1", lF="0", li="T(0)=1, T(1)=1"), "")
 
 # ---------------------------------------------------------------- Wolfram: Parser
@@ -287,7 +292,7 @@ for tex in (r"A \wedge \neg B \Rightarrow C", "A ∧ B ∨ ¬C → D ↔ E", r"W
 app, win = A.create_app([])
 win.show()
 app.processEvents()
-check(len(win.pages) == 8)
+check(len(win.pages) == 9)
 check([p.KEY for p in win.pages] == list(A.PAGE_KEYS))
 
 
@@ -351,6 +356,9 @@ shot("induktion", "Serie 7·8", 0, "induktion_rechenweg")
 shot("induktion", "Serie 7·8", 1, "induktion_parkett")
 shot("induktion", "Serie 7·11", 1, "induktion_quicksort")
 shot("zaehlen", "Serie 8·19c", 0, "zaehlen_rechenweg")
+shot("zaehlkomplex", "Serie 9·4", 0, "zaehlkomplex_rechenweg")
+shot("zaehlkomplex", "Serie 9·11", 1, "zaehlkomplex_rekursion")
+shot("zaehlkomplex", "Serie 9·14b", 1, "zaehlkomplex_erzeugend")
 pg = shot("algorithmen", "Worst Case insertionSort", 0, "worstcase")
 check("Schritt" in pg.vm.title or pg.vm.title)
 
