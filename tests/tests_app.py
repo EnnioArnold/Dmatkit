@@ -386,6 +386,19 @@ check(page.result is None)
 check("Traceback" not in page.view.message[1])
 snap("fehler")
 
+# Regression »Prädikatenlogik hängt«: QTest.qWait hält den GIL und lässt den Rechen-Thread
+# verhungern (Mathtext-Erstladen dauert dann ewig). Der Kit rechnet in Millisekunden; mit
+# page.wait() (processEvents + sleep) muss jede Seite binnen Sekunden fertig sein.
+import time as _t
+for _i in (2, 3):
+    _pg = win.pages[_i]
+    win.set_page(_i)
+    _pg.load_example(A.EXAMPLES[_pg.KEY][0][0])
+    _t0 = _t.time()
+    _pg.compute()
+    _pg.wait(20000)
+    check(_pg.result is not None and not _pg.running and _t.time() - _t0 < 20, _pg.KEY)
+
 # Verlauf, Export, Dezimal, Thema
 page = win.pages[0]
 win.set_page(0)
